@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Recorder Clip Modeler</title>
+<style>
+  :root {
+    --bg: #1b1f24;
+    --panel: #21262d;
+    --panel-border: #333b44;
+    --text: #e7e3dc;
+    --text-muted: #8b939c;
+    --accent: #c08552;
+    --mono: ui-monospace, "SF Mono", Consolas, "Roboto Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans);
+  }
+  #app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+  #panel {
+    width: 340px; flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+    padding: 28px 24px;
+    overflow-y: auto;
+  }
+  #panel h1 {
+    font-size: 18px; margin: 0 0 4px;
+    font-weight: 600; letter-spacing: 0.01em;
+  }
+  #panel p.sub {
+    margin: 0 0 28px; font-size: 13px; color: var(--text-muted); line-height: 1.5;
+  }
+  .group { margin-bottom: 22px; }
+  .group-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px; font-size: 13px;
+  }
+  .group-label span.value {
+    font-family: var(--mono); color: var(--accent); font-size: 13px;
+  }
+  input[type="range"] {
+    width: 100%; accent-color: var(--accent);
+    height: 4px; margin: 0;
+  }
+  .number-row { display: flex; gap: 8px; margin-top: 6px; }
+  input[type="number"] {
+    width: 100%;
+    background: #171b20;
+    border: 1px solid var(--panel-border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 4px;
+  }
+  input[type="number"]:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+  hr.div { border: none; border-top: 1px solid var(--panel-border); margin: 24px 0; }
+
+  #readouts { font-size: 13px; }
+  #readouts .row {
+    display: flex; justify-content: space-between; padding: 5px 0;
+    color: var(--text-muted);
+  }
+  #readouts .row span.val { font-family: var(--mono); color: var(--text); }
+
+  button#resetBtn {
+    margin-top: 20px; width: 100%;
+    background: transparent; border: 1px solid var(--panel-border);
+    color: var(--text-muted); padding: 9px; border-radius: 4px;
+    font-size: 13px; cursor: pointer; font-family: var(--sans);
+  }
+  button#resetBtn:hover { border-color: var(--accent); color: var(--text); }
+
+  #hint {
+    margin-top: 24px; font-size: 12px; color: var(--text-muted); line-height: 1.6;
+  }
+
+  #viewport { flex: 1; position: relative; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <h1>Recorder clip modeler</h1>
+    <p class="sub">Tapered sleeve that slips over the recorder barrel. All dimensions in millimeters.</p>
+
+    <div class="group">
+      <div class="group-label"><span class="name">Top inner circumference</span><span class="value" id="topCircVal">64.0 mm</span></div>
+      <input type="range" id="topCircRange" min="30" max="110" step="0.5" value="64" />
+      <div class="number-row"><input type="number" id="topCircNum" min="1" step="0.1" value="64" /></div>
+    </div>
+
+    <div class="group">
+      <div class="group-label"><span class="name">Bottom inner circumference</span><span class="value" id="bottomCircVal">60.0 mm</span></div>
+      <input type="range" id="bottomCircRange" min="30" max="110" step="0.5" value="60" />
+      <div class="number-row"><input type="number" id="bottomCircNum" min="1" step="0.1" value="60" /></div>
+    </div>
+
+    <div class="group">
+      <div class="group-label"><span class="name">Clip length</span><span class="value" id="lengthVal">73.0 mm</span></div>
+      <input type="range" id="lengthRange" min="10" max="150" step="0.5" value="73" />
+      <div class="number-row"><input type="number" id="lengthNum" min="1" step="0.1" value="73" /></div>
+    </div>
+
+    <div class="group">
+      <div class="group-label"><span class="name">Wall thickness</span><span class="value" id="thickVal">2.5 mm</span></div>
+      <input type="range" id="thickRange" min="0.4" max="6" step="0.1" value="2.5" />
+      <div class="number-row"><input type="number" id="thickNum" min="0.1" step="0.1" value="2.5" /></div>
+    </div>
+
+    <hr class="div" />
+
+    <div id="readouts">
+      <div class="row"><span>Top inner &#8960;</span><span class="val" id="roTopInnerD">-</span></div>
+      <div class="row"><span>Bottom inner &#8960;</span><span class="val" id="roBottomInnerD">-</span></div>
+      <div class="row"><span>Top outer &#8960;</span><span class="val" id="roTopOuterD">-</span></div>
+      <div class="row"><span>Bottom outer &#8960;</span><span class="val" id="roBottomOuterD">-</span></div>
+      <div class="row"><span>Top outer circumference</span><span class="val" id="roTopOuterC">-</span></div>
+      <div class="row"><span>Bottom outer circumference</span><span class="val" id="roBottomOuterC">-</span></div>
+      <div class="row"><span>Taper (half-angle)</span><span class="val" id="roTaper">-</span></div>
+    </div>
+
+    <button id="resetBtn">Reset to measured dimensions</button>
+
+    <div id="hint">Drag to rotate &middot; scroll to zoom<br/>1 grid square = 10 mm</div>
+  </aside>
+
+  <main id="viewport"></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- DEFAULTS / STATE ----------
+  var DEFAULTS = { topCirc: 64, bottomCirc: 60, length: 73, thickness: 2.5 };
+  var state = Object.assign({}, DEFAULTS);
+
+  // ---------- DOM ----------
+  var el = {
+    topCircRange: document.getElementById('topCircRange'),
+    topCircNum: document.getElementById('topCircNum'),
+    topCircVal: document.getElementById('topCircVal'),
+    bottomCircRange: document.getElementById('bottomCircRange'),
+    bottomCircNum: document.getElementById('bottomCircNum'),
+    bottomCircVal: document.getElementById('bottomCircVal'),
+    lengthRange: document.getElementById('lengthRange'),
+    lengthNum: document.getElementById('lengthNum'),
+    lengthVal: document.getElementById('lengthVal'),
+    thickRange: document.getElementById('thickRange'),
+    thickNum: document.getElementById('thickNum'),
+    thickVal: document.getElementById('thickVal'),
+    roTopInnerD: document.getElementById('roTopInnerD'),
+    roBottomInnerD: document.getElementById('roBottomInnerD'),
+    roTopOuterD: document.getElementById('roTopOuterD'),
+    roBottomOuterD: document.getElementById('roBottomOuterD'),
+    roTopOuterC: document.getElementById('roTopOuterC'),
+    roBottomOuterC: document.getElementById('roBottomOuterC'),
+    roTaper: document.getElementById('roTaper'),
+    resetBtn: document.getElementById('resetBtn'),
+    viewport: document.getElementById('viewport')
+  };
+
+  function fmt1(n) { return n.toFixed(1); }
+
+  // ---------- LINK RANGE + NUMBER INPUTS ----------
+  function bindPair(rangeEl, numEl, labelEl, unit, key, onChange) {
+    function set(val) {
+      val = parseFloat(val);
+      if (isNaN(val)) return;
+      state[key] = val;
+      rangeEl.value = val;
+      numEl.value = val;
+      labelEl.textContent = fmt1(val) + ' ' + unit;
+      onChange();
+    }
+    rangeEl.addEventListener('input', function () { set(rangeEl.value); });
+    numEl.addEventListener('input', function () { set(numEl.value); });
+    set(state[key]);
+    return set;
+  }
+
+  // ---------- THREE.JS SETUP ----------
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1b1f24);
+
+  var camera = new THREE.PerspectiveCamera(40, 1, 0.1, 5000);
+
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  el.viewport.appendChild(renderer.domElement);
+
+  scene.add(new THREE.HemisphereLight(0xf5f0e6, 0x1a1a1a, 0.9));
+  var key1 = new THREE.DirectionalLight(0xffffff, 0.9);
+  key1.position.set(120, 200, 150);
+  scene.add(key1);
+  var key2 = new THREE.DirectionalLight(0xffffff, 0.35);
+  key2.position.set(-150, -50, -100);
+  scene.add(key2);
+
+  var grid = new THREE.GridHelper(200, 20, 0x3a4149, 0x2a3138);
+  scene.add(grid);
+
+  var tubeGroup = new THREE.Group();
+  scene.add(tubeGroup);
+
+  var tubeMesh = null;
+  var edgesLine = null;
+
+  var tubeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xede6d6,
+    metalness: 0.05,
+    roughness: 0.55,
+    side: THREE.DoubleSide
+  });
+
+  function buildTube() {
+    var topR = state.topCirc / (2 * Math.PI);
+    var bottomR = state.bottomCirc / (2 * Math.PI);
+    var t = state.thickness;
+    var len = state.length;
+    var half = len / 2;
+
+    var topOuterR = topR + t;
+    var bottomOuterR = bottomR + t;
+
+    // Profile traced as a closed loop (outer wall up, top rim across,
+    // inner wall down, bottom rim across) so the revolved solid is a
+    // fully watertight tube, open only through the bore.
+    var pts = [
+      new THREE.Vector2(bottomOuterR, -half),
+      new THREE.Vector2(topOuterR, half),
+      new THREE.Vector2(topR, half),
+      new THREE.Vector2(bottomR, -half),
+      new THREE.Vector2(bottomOuterR, -half)
+    ];
+
+    var geo = new THREE.LatheGeometry(pts, 96);
+    geo.computeVertexNormals();
+
+    if (tubeMesh) {
+      tubeGroup.remove(tubeMesh);
+      tubeMesh.geometry.dispose();
+    }
+    if (edgesLine) {
+      tubeGroup.remove(edgesLine);
+      edgesLine.geometry.dispose();
+    }
+
+    tubeMesh = new THREE.Mesh(geo, tubeMaterial);
+    tubeGroup.add(tubeMesh);
+
+    var edgesGeo = new THREE.EdgesGeometry(geo, 20);
+    edgesLine = new THREE.LineSegments(
+      edgesGeo,
+      new THREE.LineBasicMaterial({ color: 0x0b0e11, transparent: true, opacity: 0.25 })
+    );
+    tubeGroup.add(edgesLine);
+
+    grid.position.y = -half - 15;
+
+    // ---- READOUTS ----
+    el.roTopInnerD.textContent = fmt1(topR * 2) + ' mm';
+    el.roBottomInnerD.textContent = fmt1(bottomR * 2) + ' mm';
+    el.roTopOuterD.textContent = fmt1(topOuterR * 2) + ' mm';
+    el.roBottomOuterD.textContent = fmt1(bottomOuterR * 2) + ' mm';
+    el.roTopOuterC.textContent = fmt1(topOuterR * 2 * Math.PI) + ' mm';
+    el.roBottomOuterC.textContent = fmt1(bottomOuterR * 2 * Math.PI) + ' mm';
+
+    var taperAngleRad = Math.atan((topR - bottomR) / len);
+    el.roTaper.textContent = fmt1(taperAngleRad * 180 / Math.PI) + '\u00B0';
+  }
+
+  bindPair(el.topCircRange, el.topCircNum, el.topCircVal, 'mm', 'topCirc', buildTube);
+  bindPair(el.bottomCircRange, el.bottomCircNum, el.bottomCircVal, 'mm', 'bottomCirc', buildTube);
+  bindPair(el.lengthRange, el.lengthNum, el.lengthVal, 'mm', 'length', buildTube);
+  bindPair(el.thickRange, el.thickNum, el.thickVal, 'mm', 'thickness', buildTube);
+
+  el.resetBtn.addEventListener('click', function () {
+    el.topCircRange.value = DEFAULTS.topCirc;
+    el.topCircRange.dispatchEvent(new Event('input'));
+    el.bottomCircRange.value = DEFAULTS.bottomCirc;
+    el.bottomCircRange.dispatchEvent(new Event('input'));
+    el.lengthRange.value = DEFAULTS.length;
+    el.lengthRange.dispatchEvent(new Event('input'));
+    el.thickRange.value = DEFAULTS.thickness;
+    el.thickRange.dispatchEvent(new Event('input'));
+  });
+
+  buildTube();
+
+  // ---------- CUSTOM ORBIT CONTROLS (no external dependency) ----------
+  var target = new THREE.Vector3(0, 0, 0);
+  var radius = 180;
+  var theta = Math.PI / 4;   // azimuth
+  var phi = Math.PI / 2.6;   // polar
+  var isDragging = false;
+  var lastX = 0, lastY = 0;
+
+  function updateCamera() {
+    phi = Math.max(0.15, Math.min(Math.PI - 0.15, phi));
+    radius = Math.max(40, Math.min(600, radius));
+    camera.position.x = target.x + radius * Math.sin(phi) * Math.sin(theta);
+    camera.position.z = target.z + radius * Math.sin(phi) * Math.cos(theta);
+    camera.position.y = target.y + radius * Math.cos(phi);
+    camera.lookAt(target);
+  }
+
+  var dom = renderer.domElement;
+  dom.style.cursor = 'grab';
+  dom.style.touchAction = 'none';
+
+  dom.addEventListener('pointerdown', function (e) {
+    isDragging = true;
+    lastX = e.clientX; lastY = e.clientY;
+    dom.style.cursor = 'grabbing';
+    dom.setPointerCapture(e.pointerId);
+  });
+  dom.addEventListener('pointermove', function (e) {
+    if (!isDragging) return;
+    var dx = e.clientX - lastX;
+    var dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    theta -= dx * 0.006;
+    phi -= dy * 0.006;
+    updateCamera();
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evt) {
+    dom.addEventListener(evt, function () {
+      isDragging = false;
+      dom.style.cursor = 'grab';
+    });
+  });
+  dom.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    radius *= (1 + e.deltaY * 0.001);
+    updateCamera();
+  }, { passive: false });
+
+  // ---------- RESIZE ----------
+  function resize() {
+    var w = el.viewport.clientWidth;
+    var h = el.viewport.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  updateCamera();
+
+  // ---------- RENDER LOOP ----------
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
