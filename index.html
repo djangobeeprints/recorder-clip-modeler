@@ -1,369 +1,1740 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Recorder Clip Modeler</title>
 <style>
-  :root {
-    --bg: #1b1f24;
-    --panel: #21262d;
-    --panel-border: #333b44;
-    --text: #e7e3dc;
-    --text-muted: #8b939c;
-    --accent: #c08552;
-    --mono: ui-monospace, "SF Mono", Consolas, "Roboto Mono", monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  :root{
+    --bg:#15171c; --panel:#1c1f26; --panel2:#232733; --line:#2f3644;
+    --ink:#e7eaf0; --dim:#98a1b3; --accent:#6aa9ff; --accent2:#2b6cd4;
+    --warn:#ffb454; --bad:#ff7a7a; --ok:#7fd48b;
   }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0; height: 100%;
-    background: var(--bg); color: var(--text);
-    font-family: var(--sans);
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font:13px/1.45 ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;
   }
-  #app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
-  #panel {
-    width: 340px; flex-shrink: 0;
-    background: var(--panel);
-    border-right: 1px solid var(--panel-border);
-    padding: 28px 24px;
-    overflow-y: auto;
+  /* ---------- left control panel ---------- */
+  #panel{
+    width:330px; flex:0 0 330px; height:100%; overflow-y:auto; overflow-x:hidden;
+    background:var(--panel); border-right:1px solid var(--line);
+    scrollbar-width:thin; scrollbar-color:#3a4254 var(--panel);
   }
-  #panel h1 {
-    font-size: 18px; margin: 0 0 4px;
-    font-weight: 600; letter-spacing: 0.01em;
+  #panel::-webkit-scrollbar{width:10px}
+  #panel::-webkit-scrollbar-thumb{background:#3a4254;border-radius:5px}
+  .head{
+    padding:14px 16px 12px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:var(--panel); z-index:5;
   }
-  #panel p.sub {
-    margin: 0 0 28px; font-size: 13px; color: var(--text-muted); line-height: 1.5;
-  }
-  .group { margin-bottom: 22px; }
-  .group-label {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 8px; font-size: 13px;
-  }
-  .group-label span.value {
-    font-family: var(--mono); color: var(--accent); font-size: 13px;
-  }
-  input[type="range"] {
-    width: 100%; accent-color: var(--accent);
-    height: 4px; margin: 0;
-  }
-  .number-row { display: flex; gap: 8px; margin-top: 6px; }
-  input[type="number"] {
-    width: 100%;
-    background: #171b20;
-    border: 1px solid var(--panel-border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 6px 8px;
-    border-radius: 4px;
-  }
-  input[type="number"]:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+  .head h1{margin:0;font-size:15px;letter-spacing:.2px;font-weight:650}
+  .head p{margin:3px 0 0;font-size:11px;color:var(--dim)}
+  .phasebar{display:flex;gap:6px;margin-top:10px}
+  .pad{padding:12px 16px}
 
-  hr.div { border: none; border-top: 1px solid var(--panel-border); margin: 24px 0; }
-
-  #readouts { font-size: 13px; }
-  #readouts .row {
-    display: flex; justify-content: space-between; padding: 5px 0;
-    color: var(--text-muted);
+  details.sec{border-bottom:1px solid var(--line)}
+  details.sec>summary{
+    cursor:pointer; list-style:none; padding:10px 16px; font-weight:600; font-size:12px;
+    letter-spacing:.5px; text-transform:uppercase; color:#c3cad8; user-select:none;
+    display:flex; align-items:center; gap:8px; background:var(--panel);
   }
-  #readouts .row span.val { font-family: var(--mono); color: var(--text); }
-
-  button#resetBtn {
-    margin-top: 20px; width: 100%;
-    background: transparent; border: 1px solid var(--panel-border);
-    color: var(--text-muted); padding: 9px; border-radius: 4px;
-    font-size: 13px; cursor: pointer; font-family: var(--sans);
+  details.sec>summary::-webkit-details-marker{display:none}
+  details.sec>summary::before{
+    content:"›"; display:inline-block; transition:transform .15s; color:var(--dim);
+    font-size:15px; line-height:1;
   }
-  button#resetBtn:hover { border-color: var(--accent); color: var(--text); }
+  details.sec[open]>summary::before{transform:rotate(90deg)}
+  details.sec>summary:hover{background:var(--panel2)}
+  .secbody{padding:4px 16px 14px}
 
-  #hint {
-    margin-top: 24px; font-size: 12px; color: var(--text-muted); line-height: 1.6;
+  .ctl{margin:11px 0 13px}
+  .ctl .row1{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+  .ctl label{font-size:12px;color:#ccd3e0}
+  .ctl .num{
+    width:74px; flex:0 0 74px; background:var(--panel2); color:var(--ink);
+    border:1px solid var(--line); border-radius:5px; padding:3px 6px;
+    font:inherit; font-variant-numeric:tabular-nums; text-align:right;
   }
+  .ctl .num:focus{outline:none;border-color:var(--accent)}
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:18px; background:transparent; margin:0;
+  }
+  input[type=range]::-webkit-slider-runnable-track{height:4px;background:#333a49;border-radius:2px}
+  input[type=range]::-moz-range-track{height:4px;background:#333a49;border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;
+    background:var(--accent);border:2px solid #10131a;cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #10131a;cursor:pointer;
+  }
+  .chk{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:12px;color:#ccd3e0;cursor:pointer}
+  .chk input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+  select{
+    width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:5px;padding:5px 6px;font:inherit;
+  }
+  select:focus{outline:none;border-color:var(--accent)}
+  textarea{
+    width:100%;min-height:96px;resize:vertical;background:var(--panel2);color:var(--ink);
+    border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;line-height:1.5;
+  }
+  textarea:focus{outline:none;border-color:var(--accent)}
 
-  #viewport { flex: 1; position: relative; }
+  button{
+    font:inherit;font-weight:600;border-radius:6px;padding:7px 11px;cursor:pointer;
+    border:1px solid var(--line);background:var(--panel2);color:var(--ink);
+  }
+  button:hover{background:#2b3140;border-color:#414a5d}
+  button.primary{background:var(--accent2);border-color:#3f7fe0;color:#fff}
+  button.primary:hover{background:#3477e0}
+  button.wide{width:100%}
+  button:disabled{opacity:.45;cursor:default}
+  .btnrow{display:flex;gap:8px;margin-top:10px}
+
+  .hint{font-size:11px;color:var(--dim);margin:6px 0 0}
+  .sub{font-size:11px;color:var(--dim);margin:-4px 0 10px}
+
+  table.read{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  table.read td{padding:3px 0;font-size:11.5px;border-bottom:1px solid #262c38}
+  table.read td:last-child{text-align:right;color:#fff;font-weight:600}
+  table.read td:first-child{color:var(--dim)}
+
+  .holegrid{display:grid;grid-template-columns:18px 1fr 42px 46px;gap:6px 8px;align-items:center;margin-top:4px}
+  .holegrid .hl{font-weight:700;font-size:13px;color:#fff}
+  .holegrid .hd{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;text-align:center}
+  .holegrid input[type=number]{
+    width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:5px;padding:3px 5px;font:inherit;text-align:right;font-variant-numeric:tabular-nums;
+  }
+  .holegrid input[type=number]:focus{outline:none;border-color:var(--accent)}
+  .holegrid .cc{display:flex;justify-content:center}
+
+  .msgs{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+  .msg{font-size:11.5px;padding:7px 9px;border-radius:5px;border-left:3px solid;line-height:1.4}
+  .msg.warn{background:#3a2e17;border-color:var(--warn);color:#ffd9a3}
+  .msg.bad{background:#3a1e1e;border-color:var(--bad);color:#ffc0c0}
+  .msg.info{background:#1b2a3a;border-color:var(--accent);color:#bcd8ff}
+
+  /* ---------- viewport ---------- */
+  #view{flex:1;position:relative;min-width:0}
+  #view canvas{display:block}
+  #hud{
+    position:absolute;left:14px;top:12px;pointer-events:none;
+    font-size:11px;color:var(--dim);text-shadow:0 1px 2px #000;
+  }
+  #hud b{color:#dfe5f0;font-weight:600}
+  #busy{
+    position:absolute;right:14px;top:12px;font-size:11px;padding:4px 9px;border-radius:12px;
+    background:#0008;color:#cfe0ff;border:1px solid #ffffff18;opacity:0;transition:opacity .15s;
+  }
+  #busy.on{opacity:1}
+  #boot{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:10px;background:var(--bg);color:var(--dim);font-size:13px;z-index:9;
+  }
+  #boot .spin{
+    width:22px;height:22px;border:2px solid #333a49;border-top-color:var(--accent);
+    border-radius:50%;animation:sp .8s linear infinite;
+  }
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .hidden{display:none !important}
 </style>
 </head>
 <body>
-<div id="app">
-  <aside id="panel">
-    <h1>Recorder clip modeler</h1>
-    <p class="sub">Tapered sleeve that slips over the recorder barrel. All dimensions in millimeters.</p>
 
-    <div class="group">
-      <div class="group-label"><span class="name">Top inner circumference</span><span class="value" id="topCircVal">64.0 mm</span></div>
-      <input type="range" id="topCircRange" min="30" max="110" step="0.5" value="64" />
-      <div class="number-row"><input type="number" id="topCircNum" min="1" step="0.1" value="64" /></div>
+<div id="panel">
+  <div class="head">
+    <h1>Recorder Clip Modeler</h1>
+    <p id="phaseLabel">Phase 1 &middot; single clip designer</p>
+    <div class="phasebar">
+      <button id="toBatch" class="wide">Batch personalization &rsaquo;</button>
+      <button id="toSingle" class="wide hidden">&lsaquo; Back to clip design</button>
     </div>
-
-    <div class="group">
-      <div class="group-label"><span class="name">Bottom inner circumference</span><span class="value" id="bottomCircVal">60.0 mm</span></div>
-      <input type="range" id="bottomCircRange" min="30" max="110" step="0.5" value="60" />
-      <div class="number-row"><input type="number" id="bottomCircNum" min="1" step="0.1" value="60" /></div>
-    </div>
-
-    <div class="group">
-      <div class="group-label"><span class="name">Clip length</span><span class="value" id="lengthVal">73.0 mm</span></div>
-      <input type="range" id="lengthRange" min="10" max="150" step="0.5" value="73" />
-      <div class="number-row"><input type="number" id="lengthNum" min="1" step="0.1" value="73" /></div>
-    </div>
-
-    <div class="group">
-      <div class="group-label"><span class="name">Wall thickness</span><span class="value" id="thickVal">2.5 mm</span></div>
-      <input type="range" id="thickRange" min="0.4" max="6" step="0.1" value="2.5" />
-      <div class="number-row"><input type="number" id="thickNum" min="0.1" step="0.1" value="2.5" /></div>
-    </div>
-
-    <hr class="div" />
-
-    <div id="readouts">
-      <div class="row"><span>Top inner &#8960;</span><span class="val" id="roTopInnerD">-</span></div>
-      <div class="row"><span>Bottom inner &#8960;</span><span class="val" id="roBottomInnerD">-</span></div>
-      <div class="row"><span>Top outer &#8960;</span><span class="val" id="roTopOuterD">-</span></div>
-      <div class="row"><span>Bottom outer &#8960;</span><span class="val" id="roBottomOuterD">-</span></div>
-      <div class="row"><span>Top outer circumference</span><span class="val" id="roTopOuterC">-</span></div>
-      <div class="row"><span>Bottom outer circumference</span><span class="val" id="roBottomOuterC">-</span></div>
-      <div class="row"><span>Taper (half-angle)</span><span class="val" id="roTaper">-</span></div>
-    </div>
-
-    <button id="resetBtn">Reset to measured dimensions</button>
-
-    <div id="hint">Drag to rotate &middot; scroll to zoom<br/>1 grid square = 10 mm</div>
-  </aside>
-
-  <main id="viewport"></main>
+  </div>
+  <div id="p1"></div>
+  <div id="p2" class="hidden"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-(function () {
-  "use strict";
+<div id="view">
+  <div id="hud"></div>
+  <div id="busy">rebuilding…</div>
+  <div id="boot"><div class="spin"></div><div id="bootMsg">loading geometry kernel…</div></div>
+</div>
 
-  // ---------- DEFAULTS / STATE ----------
-  var DEFAULTS = { topCirc: 64, bottomCirc: 60, length: 73, thickness: 2.5 };
-  var state = Object.assign({}, DEFAULTS);
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "manifold-3d": "https://cdn.jsdelivr.net/npm/manifold-3d@3.5.3/manifold.js",
+    "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"
+  }
+}
+</script>
 
-  // ---------- DOM ----------
-  var el = {
-    topCircRange: document.getElementById('topCircRange'),
-    topCircNum: document.getElementById('topCircNum'),
-    topCircVal: document.getElementById('topCircVal'),
-    bottomCircRange: document.getElementById('bottomCircRange'),
-    bottomCircNum: document.getElementById('bottomCircNum'),
-    bottomCircVal: document.getElementById('bottomCircVal'),
-    lengthRange: document.getElementById('lengthRange'),
-    lengthNum: document.getElementById('lengthNum'),
-    lengthVal: document.getElementById('lengthVal'),
-    thickRange: document.getElementById('thickRange'),
-    thickNum: document.getElementById('thickNum'),
-    thickVal: document.getElementById('thickVal'),
-    roTopInnerD: document.getElementById('roTopInnerD'),
-    roBottomInnerD: document.getElementById('roBottomInnerD'),
-    roTopOuterD: document.getElementById('roTopOuterD'),
-    roBottomOuterD: document.getElementById('roBottomOuterD'),
-    roTopOuterC: document.getElementById('roTopOuterC'),
-    roBottomOuterC: document.getElementById('roBottomOuterC'),
-    roTaper: document.getElementById('roTaper'),
-    resetBtn: document.getElementById('resetBtn'),
-    viewport: document.getElementById('viewport')
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FontLoader }    from 'three/addons/loaders/FontLoader.js';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+import ManifoldModule    from 'manifold-3d';
+import { zipSync, strToU8 } from 'fflate';
+
+const FONT_URL = 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/fonts/helvetiker_bold.typeface.json';
+const TAU = Math.PI * 2;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const $ = id => document.getElementById(id);
+
+/* =====================================================================
+   PARAMETER SCHEMA
+   One declarative list drives the UI, persistence and reset. Every
+   phase-1 value the spec names lives here; the few additions for the
+   polished edge treatment are marked "extra".
+   ===================================================================== */
+const P1_SCHEMA = [
+  { sec:'Tube', open:true, items:[
+    { k:'topCirc',   t:'num',  label:'Top inner circumference',  def:64,  min:30, max:110, step:0.5, u:'mm' },
+    { k:'gCirc',     t:'num',  label:'Inner circumference at G', def:60,  min:30, max:110, step:0.5, u:'mm' },
+    { k:'gDist',     t:'num',  label:'Distance to G (from top)', def:73,  min:10, max:150, step:0.5, u:'mm' },
+    { k:'length',    t:'num',  label:'Clip length',              def:73,  min:10, max:150, step:0.5, u:'mm' },
+    { k:'thickness', t:'num',  label:'Wall thickness',           def:2.5, min:0.4,max:6,   step:0.1, u:'mm' },
+  ]},
+  { sec:'Edges and finish', open:true, items:[
+    { k:'edgeStyle', t:'sel',  label:'Edge treatment', def:'round',
+      options:[['round','Rounded (fillet)'],['chamfer','Chamfered (flat bevel)']] },
+    { k:'botEdgeOn', t:'chk',  label:'Break the bottom outer edge', def:true },
+    { k:'botEdge',   t:'num',  label:'Bottom edge size', def:1.0, min:0.2, max:3, step:0.1, u:'mm' },
+    { k:'topEdge',   t:'num',  label:'Top rim break',    def:0.5, min:0,   max:2, step:0.1, u:'mm' },
+    { k:'detail',    t:'sel',  label:'Mesh smoothness', def:'std',
+      options:[['draft','Draft - fastest'],['std','Standard'],['fine','Fine - best for export']] },
+  ]},
+  { sec:'Relief channel (bore)', items:[
+    { k:'reliefOn',    t:'chk', label:'Enabled', def:true },
+    { k:'reliefAngle', t:'num', label:'Angular position', def:45, min:0, max:360, step:1, u:'deg' },
+    { k:'reliefW',     t:'num', label:'Channel width',    def:3,  min:1, max:10,  step:0.5, u:'mm' },
+    { k:'reliefD',     t:'num', label:'Channel depth',    def:1,  min:0.2, max:3, step:0.1, u:'mm' },
+    { k:'reliefL',     t:'num', label:'Channel length (from top)', def:10, min:2, max:60, step:0.5, u:'mm' },
+  ]},
+  { sec:'Front access channel', items:[
+    { k:'chanOn',     t:'chk', label:'Enabled', def:true },
+    { k:'chanW',      t:'num', label:'Channel width',  def:20, min:5, max:40, step:0.5, u:'mm' },
+    { k:'chanCollar', t:'num', label:'Collar height (from top)', def:12, min:4, max:40, step:0.5, u:'mm' },
+    { k:'chanArch',   t:'num', label:'Arch of the opening', def:100, min:0, max:100, step:5, u:'%' },
+    { k:'rimOn',      t:'chk', label:'Break the opening edges', def:true },
+    { k:'rimSize',    t:'num', label:'Opening edge size', def:1.0, min:0.2, max:3, step:0.1, u:'mm' },
+  ]},
+  { sec:'Thumb window', items:[
+    { k:'twOn',   t:'chk', label:'Enabled', def:true },
+    { k:'twDist', t:'num', label:'Distance from top', def:14, min:4, max:60, step:0.5, u:'mm' },
+    { k:'twDia',  t:'num', label:'Window diameter',   def:20, min:6, max:35, step:0.5, u:'mm' },
+  ]},
+  { sec:'Thumb rest', items:[
+    { k:'trOn',  t:'chk', label:'Enabled', def:true },
+    { k:'trDia', t:'num', label:'Cutout diameter', def:10, min:4, max:25, step:0.5, u:'mm' },
+  ]},
+  { sec:'Hole letters', open:true, items:[
+    { k:'letH', t:'num', label:'Letter size (cap height)', def:8, min:4, max:16, step:0.5, u:'mm' },
+    { k:'letD', t:'num', label:'Letter extrusion depth',   def:1, min:0.2, max:3, step:0.1, u:'mm' },
+  ]},
+  { sec:'Tilted print support', open:true, items:[
+    { k:'tiltOn',     t:'chk', label:'Enabled', def:true },
+    { k:'tiltSpine',  t:'num', label:'Spine thickness', def:4,   min:2,  max:8,   step:0.5,  u:'mm' },
+    { k:'tiltGap',    t:'num', label:'Support gap',     def:1,   min:0.4,max:2,   step:0.1,  u:'mm' },
+    { k:'tiltPitch',  t:'num', label:'Pillar spacing',  def:7,   min:3,  max:20,  step:0.5,  u:'mm' },
+    { k:'tiltPillar', t:'num', label:'Pillar size',     def:1,   min:0.6,max:3,   step:0.2,  u:'mm' },
+    { k:'tiltRaft',   t:'num', label:'Raft thickness',  def:0.2, min:0.1,max:0.6, step:0.05, u:'mm' },
+  ]},
+  { sec:'Print orientation', open:true, items:[
+    { k:'flipOn', t:'chk', label:'Flip end-to-end (print the top end down)', def:false },
+  ]},
+];
+
+const HOLES = [
+  { k:'B', def:21   }, { k:'A', def:41.5 }, { k:'G', def:62 },
+  { k:'F', def:85   }, { k:'E', def:108  }, { k:'D', def:130 },
+];
+
+const P2_SCHEMA = [
+  { k:'bLetH',  t:'num', label:'Letter size',               def:4,   min:2,  max:14,  step:0.5, u:'mm' },
+  { k:'bLetD',  t:'num', label:'Letter extrusion depth',    def:1,   min:0.2,max:3,   step:0.1, u:'mm' },
+  { k:'bStart', t:'num', label:'Start position (from top)', def:25,  min:0,  max:150, step:0.5, u:'mm' },
+  { k:'bClear', t:'num', label:'Clearance between clips',   def:10,  min:2,  max:30,  step:0.5, u:'mm' },
+  { k:'bBed',   t:'num', label:'Bed size (square)',         def:250, min:100,max:400, step:1,   u:'mm' },
+  { k:'byObjOn',    t:'chk', label:'Optimize spacing & order for print-by-object', def:false },
+];
+
+const DETAIL = {
+  draft: { rev: 96, refine:4.0, gRefine:3.4, steps:4, glyph:5,  ojoin:24 },
+  std:   { rev:144, refine:2.5, gRefine:2.2, steps:6, glyph:9,  ojoin:32 },
+  fine:  { rev:240, refine:1.4, gRefine:1.1, steps:9, glyph:16, ojoin:56 },
+};
+
+/* ---------- live state ---------- */
+const S = {};
+const B = {};
+for (const g of P1_SCHEMA) for (const it of g.items) S[it.k] = it.def;
+for (const h of HOLES) { S['h_' + h.k] = h.def; S['on_' + h.k] = true; S['bk_' + h.k] = false; }
+for (const it of P2_SCHEMA) B[it.k] = it.def;
+B.names = '';
+
+/* =====================================================================
+   PERSISTENCE
+   Phase 1 (the clip design) persists in full, as the spec requires.
+   Phase 2's personalization and bed-layout controls now persist too, at
+   the user's request -- everything except the name list itself, which
+   still starts blank each session.
+   Must never throw or block startup.
+   ===================================================================== */
+const STORE_KEY    = 'recorderClipModeler.phase1Settings.v2';
+const STORE_KEY_V1 = 'recorderClipModeler.phase1Settings.v1';
+const STORE_KEY_P2 = 'recorderClipModeler.phase2Settings.v1';
+
+/* Copies matching keys from obj into target, skipping any key listed in
+   omit, and only when the stored value's type matches the current
+   default's type (guards against corrupt/unexpected localStorage data). */
+function applyStored(target, obj, omit) {
+  let used = false;
+  for (const k of Object.keys(target)) {
+    if (omit && omit.has(k)) continue;
+    if (!(k in obj)) continue;
+    const v = obj[k], cur = target[k];
+    if (typeof cur === 'number' && typeof v === 'number' && isFinite(v)) { target[k] = v; used = true; }
+    else if (typeof cur === 'boolean' && typeof v === 'boolean')         { target[k] = v; used = true; }
+    else if (typeof cur === 'string'  && typeof v === 'string')          { target[k] = v; used = true; }
+  }
+  return used;
+}
+
+function saveSettings() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
+}
+function loadSettings() {
+  for (const key of [STORE_KEY, STORE_KEY_V1]) {
+    let obj = null;
+    try { obj = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { obj = null; }
+    if (!obj || typeof obj !== 'object') continue;
+    if (applyStored(S, obj, null)) return;
+  }
+}
+function resetSettings() {
+  for (const g of P1_SCHEMA) for (const it of g.items) S[it.k] = it.def;
+  for (const h of HOLES) { S['h_' + h.k] = h.def; S['on_' + h.k] = true; S['bk_' + h.k] = false; }
+  syncInputs(); saveSettings(); requestBuild();
+}
+
+const P2_OMIT = new Set(['names']);
+function saveP2Settings() {
+  try {
+    const out = {};
+    for (const k of Object.keys(B)) if (!P2_OMIT.has(k)) out[k] = B[k];
+    localStorage.setItem(STORE_KEY_P2, JSON.stringify(out));
+  } catch (e) { /* ignore */ }
+}
+function loadP2Settings() {
+  let obj = null;
+  try { obj = JSON.parse(localStorage.getItem(STORE_KEY_P2) || 'null'); } catch (e) { obj = null; }
+  if (obj && typeof obj === 'object') applyStored(B, obj, P2_OMIT);
+}
+function onP2Change() { saveP2Settings(); requestBuild(); }
+
+/* =====================================================================
+   CONTROL PANEL
+   ===================================================================== */
+const inputs = [];
+
+function el(tag, cls, txt) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (txt != null) n.textContent = txt;
+  return n;
+}
+
+function makeControl(item, store, onChange) {
+  if (item.t === 'chk') {
+    const lab = el('label', 'chk');
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!store[item.k];
+    lab.append(cb, el('span', null, item.label));
+    cb.addEventListener('change', () => { store[item.k] = cb.checked; onChange(); });
+    inputs.push({ sync: () => { cb.checked = !!store[item.k]; } });
+    return lab;
+  }
+  if (item.t === 'sel') {
+    const wrap = el('div', 'ctl');
+    const r1 = el('div', 'row1'); r1.append(el('label', null, item.label));
+    const sel = el('select');
+    for (const [v, t] of item.options) { const o = el('option', null, t); o.value = v; sel.append(o); }
+    sel.value = store[item.k];
+    sel.addEventListener('change', () => { store[item.k] = sel.value; onChange(); });
+    inputs.push({ sync: () => { sel.value = store[item.k]; } });
+    wrap.append(r1, sel);
+    return wrap;
+  }
+  // paired slider + numeric entry
+  const wrap = el('div', 'ctl');
+  const r1 = el('div', 'row1');
+  const lab = el('label', null, item.label);
+  const num = el('input', 'num'); num.type = 'number';
+  num.min = item.min; num.max = item.max; num.step = item.step;
+  const rng = el('input'); rng.type = 'range';
+  rng.min = item.min; rng.max = item.max; rng.step = item.step;
+
+  const dec = String(item.step).includes('.') ? String(item.step).split('.')[1].length : 0;
+  const show = v => { num.value = v.toFixed(dec); rng.value = v; };
+  const commit = v => {
+    if (!isFinite(v)) { show(store[item.k]); return; }
+    v = clamp(v, item.min, item.max);
+    store[item.k] = v; show(v); onChange();
+  };
+  rng.addEventListener('input', () => commit(parseFloat(rng.value)));
+  num.addEventListener('change', () => commit(parseFloat(num.value)));
+  num.addEventListener('blur',   () => show(store[item.k]));
+  show(store[item.k]);
+  inputs.push({ sync: () => show(store[item.k]) });
+
+  r1.append(lab, num);
+  wrap.append(r1, rng);
+  if (item.u) { lab.textContent = item.label + ' (' + item.u + ')'; }
+  return wrap;
+}
+
+function syncInputs() { for (const i of inputs) i.sync(); }
+
+function buildPanel1() {
+  const root = $('p1');
+  for (const grp of P1_SCHEMA) {
+    const d = el('details', 'sec'); if (grp.open) d.open = true;
+    d.append(el('summary', null, grp.sec));
+    const body = el('div', 'secbody');
+    for (const it of grp.items) body.append(makeControl(it, S, onP1Change));
+    if (grp.sec === 'Hole letters') body.append(buildHoleGrid());
+    if (grp.sec === 'Tilted print support') body.append(el('p', 'hint',
+      'Tips the clip up on end at 45° (like tilting a box enclosure to avoid a flat overhang) and builds a ' +
+      'matching support underneath, directly into the model, instead of relying on the slicer: a thin raft on ' +
+      'the bed, a triangular spine running parallel to the clip’s underside 1mm below it, and small square ' +
+      'pillars bridging that gap every few mm. Snap or cut the pillars off after printing. Off, the clip ' +
+      'previews and exports standing up on its bottom rim instead, as it did before this feature existed.'));
+    if (grp.sec === 'Print orientation') body.append(el('p', 'hint',
+      'The clip’s top end is wider than its bottom end. Enabled, the whole clip is rotated end-for-end ' +
+      'before printing so the wider top sits at the bed and the narrower bottom sits up top — a bigger ' +
+      'first-layer footprint for adhesion — instead of the reverse. Works the same way whether tilted ' +
+      'print support is on or off; the hole letters, thumb window, and channel keep their normal positions ' +
+      'either way, only the print-bed end changes.'));
+    d.append(body); root.append(d);
+  }
+  // readouts
+  const d = el('details', 'sec'); d.open = true;
+  d.append(el('summary', null, 'Derived dimensions'));
+  const body = el('div', 'secbody');
+  const tbl = el('table', 'read'); tbl.id = 'readouts';
+  body.append(tbl); d.append(body); root.append(d);
+
+  // actions
+  const act = el('div', 'pad');
+  const msgs = el('div', 'msgs'); msgs.id = 'p1msgs';
+  const b1 = el('button', 'primary wide', 'Export STL (single clip)');
+  b1.addEventListener('click', exportSingle);
+  const b2 = el('button', 'wide', 'Reset to defaults');
+  b2.addEventListener('click', () => { if (confirm('Reset all clip-design values to their defaults?')) resetSettings(); });
+  act.append(msgs, el('div', 'btnrow')); act.lastChild.append(b1);
+  const row2 = el('div', 'btnrow'); row2.append(b2); act.append(row2);
+  root.append(act);
+}
+
+function buildHoleGrid() {
+  const g = el('div', 'holegrid');
+  g.append(el('div'), el('div', 'hd', 'mm from top'), el('div', 'hd', 'show'), el('div', 'hd', 'back'));
+  for (const h of HOLES) {
+    g.append(el('div', 'hl', h.k));
+    const num = el('input'); num.type = 'number'; num.step = 0.5; num.min = 0; num.max = 200;
+    num.value = S['h_' + h.k];
+    num.addEventListener('change', () => {
+      const v = parseFloat(num.value);
+      if (isFinite(v)) S['h_' + h.k] = clamp(v, 0, 200);
+      num.value = S['h_' + h.k]; onP1Change();
+    });
+    const on = el('input'); on.type = 'checkbox'; on.checked = S['on_' + h.k];
+    on.addEventListener('change', () => { S['on_' + h.k] = on.checked; onP1Change(); });
+    const bk = el('input'); bk.type = 'checkbox'; bk.checked = S['bk_' + h.k];
+    bk.addEventListener('change', () => { S['bk_' + h.k] = bk.checked; onP1Change(); });
+    const c1 = el('div', 'cc'); c1.append(on);
+    const c2 = el('div', 'cc'); c2.append(bk);
+    g.append(num, c1, c2);
+    inputs.push({ sync: () => {
+      num.value = S['h_' + h.k]; on.checked = S['on_' + h.k]; bk.checked = S['bk_' + h.k];
+    }});
+  }
+  return g;
+}
+
+function buildPanel2() {
+  const root = $('p2');
+  const d0 = el('details', 'sec'); d0.open = true;
+  d0.append(el('summary', null, 'Names'));
+  const b0 = el('div', 'secbody');
+  const ta = el('textarea');
+  ta.placeholder = 'Ada, Bela, Thomas L., Aminia I.';
+  ta.addEventListener('input', () => { B.names = ta.value; requestBuild(); });
+  b0.append(ta, el('p', 'hint',
+    'Separate with commas, or with spaces. Without commas, a lone initial such as "L." sticks to the name before it.'));
+  d0.append(b0); root.append(d0);
+
+  const d1 = el('details', 'sec'); d1.open = true;
+  d1.append(el('summary', null, 'Personalization'));
+  const b1 = el('div', 'secbody');
+  for (const it of P2_SCHEMA.slice(0, 3)) b1.append(makeControl(it, B, onP2Change));
+  b1.append(el('p', 'hint', 'The name runs down the back of the clip, on the same line as the thumb window.'));
+  d1.append(b1); root.append(d1);
+
+  const d2 = el('details', 'sec'); d2.open = true;
+  d2.append(el('summary', null, 'Print bed'));
+  const b2 = el('div', 'secbody');
+  for (const it of P2_SCHEMA.slice(3)) b2.append(makeControl(it, B, onP2Change));
+  b2.append(el('p', 'hint',
+    'Sequential ("print by object") printing needs a different layout, not just more clearance — on a ' +
+    'CoreXY machine the gantry beam spans the entire bed width at whatever Y it’s parked at, so two ' +
+    'clips side by side in the same row can conflict no matter how far apart in X they are. Enabled, this ' +
+    'zigzags clips instead: the 1st at the plate’s left edge, the 2nd at the right edge one step ' +
+    'further back in Y, the 3rd back at the left edge a further step behind that, and so on — Y always ' +
+    'strictly increases, never repeats, and never runs backward. Each step is the clip’s own width ' +
+    'plus the clearance above, so a smaller clearance fits more clips per plate.'));
+  const tbl = el('table', 'read'); tbl.id = 'bedReadouts';
+  b2.append(tbl);
+  d2.append(b2); root.append(d2);
+
+  const act = el('div', 'pad');
+  const msgs = el('div', 'msgs'); msgs.id = 'p2msgs';
+  const bx = el('button', 'primary wide', 'Export STL (whole bed)');
+  bx.addEventListener('click', exportBatch);
+  const b3 = el('button', 'wide', 'Export 3MF (per-object)');
+  b3.addEventListener('click', exportBatch3MF);
+  const row = el('div', 'btnrow'); row.append(bx);
+  const row2 = el('div', 'btnrow'); row2.append(b3);
+  act.append(msgs, row, row2,
+    el('p', 'hint', '3MF keeps each clip as its own object, for slicers with a "per object" print mode ' +
+      '(so one failed clip doesn’t doom the whole plate). STL fuses everything into one solid.'));
+  root.append(act);
+}
+
+function onP1Change() { saveSettings(); requestBuild(); }
+
+/* =====================================================================
+   GEOMETRY KERNEL
+
+   Everything is modelled in manifold space with +Z as the tube axis
+   (the tube is centred on Z = 0, top at +L/2).  The three.js scene
+   rotates the whole thing so Z points up the screen, matching the
+   spec's "Y is the long axis, vertical in the 3D view"; STLs are
+   written Z-up so the part lands standing on the print bed.
+
+   The one idea that replaces per-feature mesh stitching: every cutout
+   is drawn as a flat 2D shape in *unrolled* wall space (u = arc length
+   around the tube, v = height, w = radial offset from the outer skin),
+   given a true round-over by lofting offset copies of itself, and then
+   warped onto the tapered cone.  One primitive covers the front
+   channel, both thumb cutouts and the bore relief groove.
+   ===================================================================== */
+let Manifold = null, CrossSection = null;
+let FONT = null, CAP_RATIO = 0.72, fontFailed = false;
+
+/* manifold objects live in WASM memory and must be released by hand. */
+let scratch = [];
+const T = o => { scratch.push(o); return o; };
+function flushScratch() {
+  const seen = new Set();
+  for (const o of scratch) {
+    if (!o || seen.has(o)) continue;
+    seen.add(o);
+    try { o.delete(); } catch (e) { /* already gone */ }
+  }
+  scratch = [];
+}
+
+/* ---------- taper maths (spec 4.1, reproduced exactly) ---------- */
+function metrics(p) {
+  const topR  = p.topCirc / TAU;
+  const gR    = p.gCirc   / TAU;
+  const slope = (gR - topR) / Math.max(0.5, p.gDist);
+  const botR  = Math.max(0.2, topR + slope * p.length);
+  const t = p.thickness, L = p.length;
+  const topOR = topR + t, botOR = botR + t;
+  return {
+    topR, gR, slope, botR, t, L,
+    topOR, botOR,
+    refR: (topR + botR) / 2 + t / 2,
+  };
+}
+
+/* ---------- 2D helpers ---------- */
+
+/* Replace each corner of a closed polygon with a tangent arc (or, with
+   segs = 1, a single straight bevel).  Radii are clamped per corner so a
+   fillet can never eat more than half of either adjacent edge. */
+function filletPoly(pts, radii, segs) {
+  const n = pts.length, out = [];
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n];
+    const r = radii[i] || 0;
+    const d1 = [p0[0] - p1[0], p0[1] - p1[1]];
+    const d2 = [p2[0] - p1[0], p2[1] - p1[1]];
+    const l1 = Math.hypot(d1[0], d1[1]), l2 = Math.hypot(d2[0], d2[1]);
+    if (r <= 1e-5 || l1 < 1e-9 || l2 < 1e-9) { out.push(p1); continue; }
+    const u1 = [d1[0] / l1, d1[1] / l1], u2 = [d2[0] / l2, d2[1] / l2];
+    const cosA = clamp(u1[0] * u2[0] + u1[1] * u2[1], -0.999999, 0.999999);
+    const ang = Math.acos(cosA);
+    const half = ang / 2;
+    let tl = r / Math.tan(half);
+    let rr = r;
+    const maxT = Math.min(l1, l2) * 0.5;
+    if (tl > maxT) { tl = maxT; rr = tl * Math.tan(half); }
+    const t1 = [p1[0] + u1[0] * tl, p1[1] + u1[1] * tl];
+    const t2 = [p1[0] + u2[0] * tl, p1[1] + u2[1] * tl];
+    if (segs <= 1) { out.push(t1, t2); continue; }
+    const bx = u1[0] + u2[0], by = u1[1] + u2[1];
+    const bl = Math.hypot(bx, by);
+    if (bl < 1e-9) { out.push(t1, t2); continue; }
+    const cd = rr / Math.sin(half);
+    const c = [p1[0] + bx / bl * cd, p1[1] + by / bl * cd];
+    const a1 = Math.atan2(t1[1] - c[1], t1[0] - c[0]);
+    const a2 = Math.atan2(t2[1] - c[1], t2[0] - c[0]);
+    let da = a2 - a1;
+    while (da >  Math.PI) da -= TAU;
+    while (da < -Math.PI) da += TAU;
+    for (let k = 0; k <= segs; k++) {
+      const a = a1 + da * k / segs;
+      out.push([c[0] + rr * Math.cos(a), c[1] + rr * Math.sin(a)]);
+    }
+  }
+  return out;
+}
+
+function off(cs, d, D) {
+  if (Math.abs(d) < 1e-6) return cs;
+  return T(cs.offset(d, 'Round', 2, D.ojoin));
+}
+
+function roundedRect(w, h, r, cx, cy, D) {
+  w = Math.max(w, 1e-3); h = Math.max(h, 1e-3);
+  r = clamp(r, 0, Math.min(w, h) / 2 - 5e-4);
+  let cs;
+  if (r <= 1e-4) cs = T(CrossSection.square([w, h], true));
+  else           cs = off(T(CrossSection.square([w - 2 * r, h - 2 * r], true)), r, D);
+  return T(cs.translate(cx, cy));
+}
+
+/* =====================================================================
+   THE UNROLLED-WALL CUTTER PRIMITIVE
+   ===================================================================== */
+const SLAB = 0.002;
+
+function slabAt(cs, z) { return T(T(cs.extrude(SLAB)).translate(0, 0, z)); }
+
+/* Loft through a sequence of (cross-section, z) levels by hulling each
+   consecutive pair and unioning the segments.  Every profile we feed it
+   is convex, so a pairwise hull *is* the exact ruled loft between two
+   levels -- which is how we get a true round-over out of nothing but
+   offset + hull + union. */
+function loftLevels(levels) {
+  const keep = [];
+  for (const lv of levels) {
+    if (keep.length && Math.abs(keep[keep.length - 1].z - lv.z) < 1e-6) continue;
+    keep.push(lv);
+  }
+  if (keep.length < 2) return null;
+  const pieces = [];
+  for (let i = 0; i + 1 < keep.length; i++) {
+    const a = keep[i], b = keep[i + 1];
+    const lo = Math.min(a.z, b.z), hi = Math.max(a.z, b.z);
+    if (Math.abs((a.e || 0) - (b.e || 0)) < 1e-9) {
+      /* constant section: a plain extrusion, far cheaper than a hull */
+      pieces.push(T(T(a.cs.extrude(hi - lo + 2 * SLAB)).translate(0, 0, lo - SLAB)));
+    } else {
+      pieces.push(T(Manifold.hull([slabAt(a.cs, a.z), slabAt(b.cs, b.z)])));
+    }
+  }
+  return T(Manifold.union(pieces));
+}
+
+/* Quarter-round levels: tangent to the side wall where the expansion is
+   zero and tangent to the surface plane at z0 where it reaches r.
+   dir = +1 flares towards increasing z, dir = -1 towards decreasing z.
+   With steps = 1 this degenerates to a straight chamfer. */
+function roundLevels(z0, r, dir, steps) {
+  if (r <= 1e-4) return [{ e: 0, z: z0 }];
+  const out = [];
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * (Math.PI / 2);
+    out.push({ e: r * (1 - Math.cos(a)), z: z0 - dir * r * (1 - Math.sin(a)) });
+  }
+  return out;
+}
+
+/* How far past the outer skin a cutter reaches.
+   A cutter's end cap is a flat polygon in unrolled space, so once wrapped
+   it spans chords of the cone rather than the cone itself and sags
+   towards the axis.  refineToLength keeps that sag to about
+   len^2 / (8R) -- a fraction of a millimetre -- and this overshoot
+   swallows it with room to spare.  Get this wrong and a membrane of skin
+   survives across the middle of the opening. */
+const OUT_PAD = 2.5;
+
+/* A through-hole cutter: constant profile P across the wall, rounded
+   over where it breaks out of the outer skin (w = 0) and again, more
+   gently, where it breaks into the bore (w = -t). */
+function throughCutter(P, m, rOut, rIn, D) {
+  const t = m.t, lv = [];
+  const inner = Math.max(1, Math.round(D.steps / 2));
+  lv.push({ cs: off(P, rOut, D), e: rOut, z: OUT_PAD });
+  const ro = roundLevels(0, rOut, +1, D.steps);
+  for (let i = ro.length - 1; i >= 0; i--) lv.push({ cs: off(P, ro[i].e, D), e: ro[i].e, z: ro[i].z });
+  const ri = roundLevels(-t, rIn, -1, inner);
+  for (let i = 0; i < ri.length; i++) lv.push({ cs: off(P, ri[i].e, D), e: ri[i].e, z: ri[i].z });
+  lv.push({ cs: off(P, rIn, D), e: rIn, z: -t - 3 });
+  return loftLevels(lv);
+}
+
+/* A blind groove cut into the bore only: filleted floor at w = -t+depth,
+   rounded lip where it meets the bore at w = -t. */
+function grooveCutter(P, m, depth, rIn, rFloor, D) {
+  const t = m.t, zFloor = -t + depth, lv = [];
+  const inner = Math.max(1, Math.round(D.steps / 2));
+  if (rFloor > 1e-4) {
+    for (let i = D.steps; i >= 0; i--) {
+      const a = (i / D.steps) * (Math.PI / 2);
+      lv.push({ cs: off(P, -rFloor * (1 - Math.cos(a)), D), e: -rFloor * (1 - Math.cos(a)), z: zFloor - rFloor * (1 - Math.sin(a)) });
+    }
+  } else {
+    lv.push({ cs: P, e: 0, z: zFloor });
+  }
+  const ri = roundLevels(-t, rIn, -1, inner);
+  for (let i = 0; i < ri.length; i++) lv.push({ cs: off(P, ri[i].e, D), e: ri[i].e, z: ri[i].z });
+  lv.push({ cs: off(P, rIn, D), e: rIn, z: -t - 3 });
+  return loftLevels(lv);
+}
+
+/* Wrap flat wall space onto the tapered tube.
+   (u, v, w) -> ( (outerR(v)+w)*cos(theta), (outerR(v)+w)*sin(theta), v )
+   with theta = theta0 + u/refR.  refineToLength first so the straight
+   edges of the flat shape actually follow the curve afterwards. */
+function wrapOnTube(mf, m, theta0, refineLen) {
+  if (!mf) return null;
+  const { L, topOR, botOR, refR } = m;
+  const dR = botOR - topOR;
+  /* Subdivide first: a flat face in unrolled space becomes a chord of the
+     cone once wrapped, so end caps and glyph tops need interior vertices
+     or they sag.  Side walls at constant u map to exact radial lines and
+     do not care either way. */
+  const fine = refineLen > 0 ? T(mf.refineToLength(refineLen)) : mf;
+  return T(fine.warpBatch((v, n) => {
+    for (let i = 0; i < n; i++) {
+      const o = i * 3, u = v[o], y = v[o + 1], w = v[o + 2];
+      const r = Math.max(0.02, topOR + dR * ((L / 2 - y) / L) + w);
+      const th = theta0 + u / refR;
+      v[o]     = r * Math.cos(th);
+      v[o + 1] = r * Math.sin(th);
+      v[o + 2] = y;
+    }
+  }));
+}
+
+/* =====================================================================
+   BODY: one filleted 2D profile, revolved
+   ===================================================================== */
+function buildBody(m, D) {
+  const { L, t, topR, botR, topOR, botOR } = m;
+  const zT = L / 2, zB = -L / 2;
+
+  const eBot = S.botEdgeOn ? clamp(S.botEdge, 0, Math.min(t - 0.3, L / 2 - 1)) : 0;
+  const eTop = clamp(S.topEdge, 0, Math.min(t * 0.35, L / 2 - 1));
+  const iBot = clamp(Math.min(0.45, (t - eBot) * 0.45), 0, L / 4);
+  const iTop = clamp(Math.min(Math.max(eTop, 0.4) * 1.5, (t - eTop) * 0.55), 0, L / 4);
+
+  //          bore bottom      outer bottom    outer top       bore top
+  const pts  = [[botR, zB],    [botOR, zB],    [topOR, zT],    [topR, zT]];
+  const rads = [ iBot,          eBot,           eTop,           iTop     ];
+  const segs = S.edgeStyle === 'chamfer' ? 1 : Math.max(3, Math.round(D.steps * 1.3));
+
+  const prof = filletPoly(pts, rads, segs);
+  return T(T(CrossSection.ofPolygons([prof], 'EvenOdd')).revolve(D.rev));
+}
+
+/* =====================================================================
+   TILTED PRINT SUPPORT (optional add-on)
+
+   Standing, the tube's thin bottom rim gives too little bed contact and
+   too little of an anchor for the front channel's collar shelf, which
+   ends up a flat ceiling over open air with nothing but the hollow bore
+   underneath it -- a bridge a slicer's own supports handle badly, since
+   they'd have to grow up through that bore and back out through the
+   channel opening. A straight-up strut there works but is thin and
+   isolated; this replaces it with a whole built-in scaffold instead,
+   modelled on how enclosures are printed tilted to turn a flat overhang
+   into a shallower, closer-to-self-supporting one.
+
+   The clip tips up nose-first at 45° (its length axis, not just its
+   cross-section) so that its 270° line -- the thumb window/name line,
+   the same one the old flat foot used -- becomes the underside running
+   the whole length. That line is the straight slant of a cone (this
+   tube's own taper), so it is *exactly* straight once tilted, not just
+   approximately: sampling just its two endpoints is enough, no curve
+   fitting needed. A thin raft sits on the bed under it; a triangular
+   spine (bottom edge on the raft, hypotenuse parallel to that slant line,
+   offset outward by the support gap so it never touches the clip) gives
+   the raft height without touching the part; small square pillars every
+   tiltPitch mm bridge the gap and are the only things that actually
+   fuse to the clip -- snap or cut those after printing.
+   ===================================================================== */
+const TILT_C = Math.SQRT1_2;   // cos 45° = sin 45°
+
+/* Rotate standing-frame (X, Y, Z) -- X the 0°/180° letters axis, Y the
+   90°/270° channel/thumb axis, Z the tube's length -- about the X axis by
+   45°, tipping the length axis up while leaving X (now the print's width)
+   alone. A single-axis rotation has no Euler-order ambiguity to get
+   wrong, and det = +1 regardless of the angle, so it can't turn the
+   solid inside out. shift (applied after) is supplied by the caller,
+   computed from the real solid's own bounding box rather than guessed,
+   so it lands exactly on the bed regardless of edge chamfers, letters,
+   or cutouts nudging the true lowest point away from the plain formula. */
+function tiltMat(shift) {
+  const c = TILT_C;
+  return [1, 0, 0, 0,  0, c, c, 0,  0, -c, c, 0,  0, 0, shift, 1];
+}
+function tiltPoint(oldY, oldZ, shift) {
+  const c = TILT_C;
+  return [c * (oldY - oldZ), c * (oldY + oldZ) + shift];   // [Y', Z']
+}
+function layTilted(solid) {
+  const rotated = T(solid.transform(tiltMat(0)));
+  const bb = rotated.boundingBox();
+  const shift = -bb.min[2];
+  return { solid: T(rotated.translate(0, 0, shift)), shift };
+}
+
+function buildScaffold(m, D, shift) {
+  const gap = S.tiltGap;
+  const spineHalf = S.tiltSpine / 2;
+  const raftT = S.tiltRaft;
+  const pillar = S.tiltPillar, pillarHalf = pillar / 2;
+  const OVERLAP = 0.3;   // fuse depth into the tube and into the spine, each side
+
+  // The 270° slant line's two ends, offset outward by the gap -- exactly
+  // straight, so these two points fully describe it (see comment above).
+  const lowGap  = tiltPoint(-(m.botOR + gap), -m.L / 2, shift);
+  const highGap = tiltPoint(-(m.topOR + gap),  m.L / 2, shift);
+
+  // Clamp the low end so the spine's hypotenuse never dips below the bed:
+  // walk in along the same straight line to wherever Z' first reaches 0.
+  // Both axes of that line are affine in the tube's own old_Z (m.botOR/
+  // topOR are linear in it, and the rotation is linear), so the same
+  // parameter t also gives the matching old_Z -- reused below to keep
+  // pillars from starting before the spine actually does.
+  let startY = lowGap[0], startZ = lowGap[1], zStart = -m.L / 2;
+  if (startZ < 0) {
+    const t = -lowGap[1] / (highGap[1] - lowGap[1]);
+    startY = lowGap[0] + t * (highGap[0] - lowGap[0]);
+    startZ = 0;
+    zStart = -m.L / 2 + t * m.L;
+  }
+  const runY = highGap[0] - startY;
+  if (Math.abs(runY) < 1) return null;   // degenerate -- nothing meaningful to build
+
+  const raftHalfW = Math.max(m.topOR, m.botOR);
+  const raft = T(T(Manifold.cube([2 * raftHalfW, Math.abs(runY), raftT], false))
+    .translate(-raftHalfW, Math.min(startY, highGap[0]), 0));
+
+  // Right triangle: bottom edge on the raft (Z'=0), hypotenuse the gap
+  // line's own slant from the clamped start up to the high end. Its
+  // local (x, y) is (Y', Z'); extrude() adds a local z for the width.
+  // Remapping (localX, localY, localZ) -> (localZ, localX, localY) puts
+  // that width on the print's X and the triangle in the Y-Z plane where
+  // it belongs -- a cyclic permutation, and so, like layTilted's own
+  // rotation, a proper one (det +1): a plain axis *swap* would instead
+  // mirror the spine (det -1) and turn it inside out under the union.
+  const tri = [[startY, 0], [highGap[0], 0], [highGap[0], highGap[1]]];
+  const spineLocal = T(T(CrossSection.ofPolygons([tri], 'EvenOdd')).extrude(2 * spineHalf))
+    .translate(0, 0, -spineHalf);
+  const remap = [0, 1, 0, 0,  0, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 1];
+  const spine = T(spineLocal.transform(remap));
+
+  const pieces = [raft, spine];
+
+  // Pillars: spaced every tiltPitch mm of the tube's own length, each a
+  // small square strut bridging the gap radially, built in the simple
+  // standing frame and carried over by the same rotation as everything
+  // else, so it doesn't need its own closed-form placement.
+  const pitch = S.tiltPitch;
+  const zLo = Math.max(zStart + 1, -m.L / 2 + 1), zHi = m.L / 2 - 1;
+  for (let z = zLo; z <= zHi; z += pitch) {
+    const frac = (m.L / 2 - z) / m.L;
+    const outerR = m.topOR + (m.botOR - m.topOR) * frac;
+    const yOuter = -(outerR + gap + OVERLAP);
+    const yInner = -(outerR - OVERLAP);
+    const h = yInner - yOuter;
+    if (h <= 0) continue;
+    const box = T(Manifold.cube([pillar, h, pillar], false));
+    const placed = T(box.translate(-pillarHalf, yOuter, z - pillarHalf));
+    pieces.push(T(placed.transform(tiltMat(shift))));
+  }
+
+  return T(Manifold.union(pieces));
+}
+
+/* 180° rotation about the Y axis (the 90°/270° channel/thumb axis):
+   out = (-x, y, -z). A proper rotation (det +1, never a mirror), and one
+   that happens to leave the Y axis -- so the 270° back/support line
+   tiltMat and buildScaffold are anchored to -- exactly where it was;
+   only the length ends (Z) and the 0°/180° letters axis swap sides. Used
+   to flip which end of the clip (top, wider, vs bottom, narrower) sits
+   at the bed. */
+const FLIP_Y180 = [-1, 0, 0, 0,  0, 1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1];
+
+/* Orient one finished clip for printing: tilted with its built-in
+   scaffold when enabled, otherwise standing on its bottom rim (as
+   before this feature existed). Either way the result's lowest point
+   sits at Z = 0, ready to place straight onto a bed or export.
+   S.flipOn rotates the whole clip end-for-end first (see FLIP_Y180) so
+   the wider top prints at the bed instead of the narrower bottom --
+   buildScaffold's radius-at-length formulas are keyed to m.topOR/m.botOR
+   sitting at their usual ends, so after the physical flip it needs the
+   swapped view (mm) to still describe the *actual* radius at each end. */
+function orientForPrint(solid, m, D) {
+  let s = solid, mm = m;
+  if (S.flipOn) {
+    s = T(s.transform(FLIP_Y180));
+    mm = { ...m, topOR: m.botOR, botOR: m.topOR, topR: m.botR, botR: m.topR };
+  }
+  if (S.tiltOn) {
+    const { solid: tilted, shift } = layTilted(s);
+    const scaffold = buildScaffold(mm, D, shift);
+    return scaffold ? T(Manifold.union([tilted, scaffold])) : tilted;
+  }
+  return T(s.translate(0, 0, m.L / 2));
+}
+
+/* =====================================================================
+   GLYPHS: real vector outlines from the typeface, extruded and wrapped
+   ===================================================================== */
+function glyphCS(ch, capH, D) {
+  const size = capH / CAP_RATIO;
+  let shapes;
+  try { shapes = FONT.generateShapes(ch, size); } catch (e) { return null; }
+  if (!shapes || !shapes.length) return null;
+  const polys = [];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = arr => {
+    if (!arr || arr.length < 3) return;
+    const p = [];
+    for (let i = 0; i < arr.length; i++) {
+      const v = arr[i];
+      if (i === arr.length - 1 && Math.hypot(v.x - arr[0].x, v.y - arr[0].y) < 1e-7) break;
+      p.push([v.x, v.y]);
+    }
+    if (p.length < 3) return;
+    for (const q of p) {
+      if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0];
+      if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1];
+    }
+    polys.push(p);
+  };
+  for (const sh of shapes) {
+    const pt = sh.extractPoints(D.glyph);
+    add(pt.shape);
+    for (const h of pt.holes) add(h);
+  }
+  if (!polys.length) return null;
+  return { cs: T(CrossSection.ofPolygons(polys, 'EvenOdd')), x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+}
+
+const ENGRAVE_OVERSHOOT = 0.25;   // clean cut through the surface being engraved
+
+/* wrapOnTube maps w -> r = base_r + w, and solid material is on the -w
+   side (deeper means more negative w) -- so cutting a pocket of the
+   requested depth means the cutter's local z should run from -depth
+   (the floor) to +overshoot (a small punch-through past w=0, so a
+   cutter that merely touches the surface can't leave a razor-thin
+   unremoved sliver on float coincidence). The overshoot belongs only on
+   that entry side, not doubled onto the floor too -- get the sign or
+   the doubling wrong and every engraving comes out shallower or deeper
+   than the slider says, which is exactly what happened here before this
+   had a comment. Used for both the hole letters and the batch name,
+   which both now sit on the round tube via wrapOnTube. */
+function cutIntoTube(cs, depth) {
+  return T(T(cs.extrude(depth + ENGRAVE_OVERSHOOT)).translate(0, 0, -depth));
+}
+
+/* =====================================================================
+   THE CLIP
+   ===================================================================== */
+function buildClip(D) {
+  const m = metrics(S);
+  let solid = buildBody(m, D);
+
+  /* shared clamp for every opening edge break (spec 4.4 clamp, widened
+     to cover the round thumb cutouts too) */
+  const rimFor = cap => {
+    const a = S.rimOn ? clamp(S.rimSize, 0, Math.max(0, Math.min(m.t - 0.6, cap))) : 0;
+    const b = clamp(a * 0.55, 0, Math.max(0, m.t - a - 0.35));
+    return { a, b };
   };
 
-  function fmt1(n) { return n.toFixed(1); }
+  const cutters = [];
 
-  // ---------- LINK RANGE + NUMBER INPUTS ----------
-  function bindPair(rangeEl, numEl, labelEl, unit, key, onChange) {
-    function set(val) {
-      val = parseFloat(val);
-      if (isNaN(val)) return;
-      state[key] = val;
-      rangeEl.value = val;
-      numEl.value = val;
-      labelEl.textContent = fmt1(val) + ' ' + unit;
-      onChange();
-    }
-    rangeEl.addEventListener('input', function () { set(rangeEl.value); });
-    numEl.addEventListener('input', function () { set(numEl.value); });
-    set(state[key]);
-    return set;
+  /* --- front access channel (spec 4.4) --- */
+  if (S.chanOn) {
+    const halfAng = Math.min((S.chanW / 2) / m.topR, 1.4);
+    const hu = halfAng * m.refR;
+    const collar = clamp(S.chanCollar, 1, m.L - 1);
+    const vTop = m.L / 2 - collar, vBot = -m.L / 2 - 6;
+    const h = vTop - vBot;
+    const arch = clamp((S.chanArch / 100) * hu, 0, Math.min(hu, h / 2) - 1e-3);
+    const P = roundedRect(2 * hu, h, arch, 0, (vTop + vBot) / 2, D);
+    const { a, b } = rimFor(S.chanW / 2 - 0.5);
+    const c = wrapOnTube(throughCutter(P, m, a, b, D), m, Math.PI / 2, D.refine);
+    if (c) cutters.push(c);
   }
 
-  // ---------- THREE.JS SETUP ----------
-  var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1b1f24);
+  /* --- thumb window (spec 4.5) --- */
+  if (S.twOn) {
+    const R = Math.max(1, S.twDia / 2);
+    const cs = T(T(CrossSection.circle(R, clamp(Math.round(R * 3.6), D.ojoin, 96))).translate(0, m.L / 2 - S.twDist));
+    const { a, b } = rimFor(R - 0.5);
+    const c = wrapOnTube(throughCutter(cs, m, a, b, D), m, 3 * Math.PI / 2, D.refine);
+    if (c) cutters.push(c);
+  }
 
-  var camera = new THREE.PerspectiveCamera(40, 1, 0.1, 5000);
+  /* --- thumb rest, auto-centred between F and E (spec 4.6) --- */
+  let restBand = null;
+  if (S.trOn) {
+    const R = Math.max(1, S.trDia / 2);
+    const cFromTop = (S.h_F + S.h_E) / 2;
+    if (cFromTop - R > 0.5 && cFromTop + R < m.L - 0.5) {
+      restBand = [cFromTop - R, cFromTop + R];
+      const cs = T(T(CrossSection.circle(R, clamp(Math.round(R * 3.6), D.ojoin, 96))).translate(0, m.L / 2 - cFromTop));
+      const { a, b } = rimFor(R - 0.5);
+      const c = wrapOnTube(throughCutter(cs, m, a, b, D), m, 3 * Math.PI / 2, D.refine);
+      if (c) cutters.push(c);
+    }
+  }
 
-  var renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(window.devicePixelRatio || 1);
-  el.viewport.appendChild(renderer.domElement);
+  /* --- relief groove in the bore (spec 4.3) --- */
+  if (S.reliefOn) {
+    const depth = Math.min(S.reliefD, m.t - 0.3);
+    if (depth > 0.05) {
+      const hu  = ((S.reliefW / 2) / m.topR) * m.refR;
+      const len = Math.min(S.reliefL, m.L);
+      const vTop = m.L / 2 + 3, vBot = m.L / 2 - len;
+      const h = vTop - vBot;
+      const P = roundedRect(2 * hu, h, Math.min(hu * 0.85, len * 0.45), 0, (vTop + vBot) / 2, D);
+      let rIn = clamp((S.rimOn ? S.rimSize : 0.6) * 0.5, 0, 0.6);
+      let rFl = Math.min(0.4, depth * 0.4);
+      const room = depth * 0.9;
+      if (rIn + rFl > room) { const s = room / (rIn + rFl); rIn *= s; rFl *= s; }
+      const c = wrapOnTube(grooveCutter(P, m, depth, rIn, rFl, D), m, S.reliefAngle * Math.PI / 180, D.refine);
+      if (c) cutters.push(c);
+    }
+  }
 
-  scene.add(new THREE.HemisphereLight(0xf5f0e6, 0x1a1a1a, 0.9));
-  var key1 = new THREE.DirectionalLight(0xffffff, 0.9);
-  key1.position.set(120, 200, 150);
-  scene.add(key1);
-  var key2 = new THREE.DirectionalLight(0xffffff, 0.35);
-  key2.position.set(-150, -50, -100);
-  scene.add(key2);
+  if (cutters.length) solid = T(solid.subtract(T(Manifold.union(cutters))));
 
-  var grid = new THREE.GridHelper(200, 20, 0x3a4149, 0x2a3138);
+  /* --- hole letters (spec 4.7) -- engraved, matching the batch name --- */
+  const hidden = [];
+  const letters = [];
+  for (const hh of HOLES) {
+    if (!S['on_' + hh.k]) continue;
+    const pos = S['h_' + hh.k];
+    if (pos > m.L - 10) { hidden.push(hh.k); continue; }
+    if (pos < 0) continue;
+    const g = glyphCS(hh.k, S.letH, D);
+    if (!g) continue;
+    const cs = T(g.cs.translate(-(g.x0 + g.x1) / 2, (m.L / 2 - pos) - (g.y0 + g.y1) / 2));
+    const w = wrapOnTube(cutIntoTube(cs, S.letD), m, S['bk_' + hh.k] ? Math.PI : 0, D.gRefine);
+    if (w) letters.push(w);
+  }
+  if (letters.length) solid = T(solid.subtract(T(Manifold.union(letters))));
+
+  return { solid, m, hidden, restBand };
+}
+
+/* =====================================================================
+   NAME RUN (phase 2, spec 5.3)
+   Engraved into the round tube on the 270° line, same as the hole
+   letters, rather than embossed: raised letters on the underside that
+   ends up closest to the bed would each work against the print's own
+   support scaffold; recessed ones stay flush with the surface instead.
+   ===================================================================== */
+function buildName(m, text, D) {
+  const capH = B.bLetH, gap = 0.28 * capH, spaceGap = 0.55 * capH;
+  const items = [];
+  for (const ch of text.toUpperCase()) {
+    if (ch === ' ') { items.push({ space: true, len: spaceGap }); continue; }
+    const g = glyphCS(ch, capH, D);
+    if (g) items.push({ g, len: Math.max(g.w, capH * 0.18) });
+  }
+  let total = 0;
+  items.forEach((it, i) => { total += it.len + (i ? gap : 0); });
+
+  let cursor = m.L / 2 - B.bStart;
+  const startV = cursor;
+  const parts = [];
+  items.forEach((it, i) => {
+    if (i) cursor -= gap;
+    if (!it.space) {
+      const g = it.g;
+      const rot = T(g.cs.rotate(-90));                 // (x,y) -> (y,-x)
+      const uMid = (g.y0 + g.y1) / 2;                  // cap height becomes the arc footprint
+      const cs = T(rot.translate(-uMid, cursor + g.x0));
+      parts.push(cutIntoTube(cs, B.bLetD));
+    }
+    cursor -= it.len;
+  });
+  const solid = parts.length
+    ? wrapOnTube(T(Manifold.union(parts)), m, 3 * Math.PI / 2, D.gRefine)
+    : null;
+  return { solid, total, startV, endV: cursor };
+}
+
+/* ---------- name list parsing (spec 5.1) ---------- */
+function parseNames(text) {
+  const raw = String(text || '');
+  if (!raw.trim()) return [];
+  if (raw.includes(',')) {
+    return raw.split(',').map(s => s.trim().replace(/\s+/g, ' ')).filter(Boolean);
+  }
+  const toks = raw.trim().split(/\s+/);
+  const out = [];
+  for (const tk of toks) {
+    if (/^[A-Za-z]\.$/.test(tk) && out.length) out[out.length - 1] += ' ' + tk;
+    else out.push(tk);
+  }
+  return out.filter(Boolean);
+}
+
+/* ---------- bed layout (spec 5.4) ---------- */
+/* The oriented single-clip bounding box gives the bed footprint directly
+   -- a rectangle either way (tilted: width x length-projection; standing:
+   diameter x diameter) -- so packing doesn't need to know which mode
+   produced it, just the two numbers. */
+function printFootprint(base, D) {
+  const oriented = orientForPrint(base.solid, base.m, D);
+  const bb = oriented.boundingBox();
+  return { footX: bb.max[0] - bb.min[0], footY: bb.max[1] - bb.min[1], footZ: bb.max[2] - bb.min[2] };
+}
+
+/* "Print by object" (sequential printing) needs a lot more thought than
+   ordinary clearance: a CoreXY gantry beam spans the *entire* bed width
+   at whatever Y it's parked at, so two clips merely side by side (same
+   row, i.e. the same Y range) can conflict no matter how much X
+   separates them -- a plain grid, even a generously-clearanced one,
+   isn't safe.
+   This lays out a simple 2-lane zigzag instead, per direct user testing
+   on their own printer: clip 0 at the plate's left edge, clip 1 at the
+   right edge one step further back in Y, clip 2 back at the left edge a
+   further step behind that, and so on -- alternating the far-left/
+   far-right edges of the plate while Y strictly increases every single
+   clip (never repeating), so consecutive clips are always both X- and
+   Y-separated. The Y step is the clip's own width (footX, its narrow
+   dimension) plus the ordinary clip-to-clip clearance -- deliberately
+   *not* the toolhead-radius-sized gap the first two attempts at this
+   used, since that made so few clips fit per plate it defeated the
+   point. Because the step is based on the narrow dimension, same-lane
+   clips (two apart, e.g. 0 and 2) rely on 2*step clearing the clip's
+   *long* dimension (footY) to stay Y-disjoint from each other -- true
+   for this clip's proportions with the default clearance, but worth
+   rechecking against the live footprint readout if the design changes
+   a lot. */
+function bedLayout(foot, count) {
+  if (B.byObjOn) {
+    const step = foot.footX + B.bClear;
+    const edgeMargin = 20;   // keep clear of the bed edge, not flush against it
+    const half = Math.max(0, (B.bBed - foot.footX) / 2 - edgeMargin);
+    const cap = Math.max(1, Math.floor(B.bBed / step));
+    const placed = Math.min(count, cap);
+    const at = i => {
+      const x = (i % 2 === 0) ? -half : half;
+      const y = (i - (placed - 1) / 2) * step;
+      return [x, y];
+    };
+    return { footX: foot.footX, footY: foot.footY, cols: 2, rows: placed, cap, placed, at };
+  }
+  const spacingX = foot.footX + B.bClear;
+  const spacingY = foot.footY + B.bClear;
+  const cols = Math.max(1, Math.floor(B.bBed / spacingX));
+  const rows = Math.max(1, Math.floor(B.bBed / spacingY));
+  const cap = cols * rows;
+  const placed = Math.min(count, cap);
+  const useC = Math.max(1, Math.min(placed, cols));
+  const useR = Math.max(1, Math.ceil(placed / cols));
+  const at = i => {
+    const col = i % cols, row = Math.floor(i / cols);
+    return [ (col - (useC - 1) / 2) * spacingX, (row - (useR - 1) / 2) * spacingY ];
+  };
+  return { footX: foot.footX, footY: foot.footY, cols, rows, cap, placed, at };
+}
+
+/* =====================================================================
+   STL (spec 6) -- per-facet normals recomputed from the triangle itself
+   ===================================================================== */
+function meshToSTL(mesh, header) {
+  const tri = mesh.triVerts, vp = mesh.vertProperties, np = mesh.numProp;
+  const n = tri.length / 3;
+  const buf = new ArrayBuffer(84 + n * 50);
+  const dv = new DataView(buf);
+  const hd = new Uint8Array(buf, 0, 80);
+  const txt = String(header).slice(0, 79);
+  for (let i = 0; i < txt.length; i++) hd[i] = txt.charCodeAt(i) & 0x7f;
+
+  let o = 84, written = 0;
+  for (let i = 0; i < n; i++) {
+    const a = tri[i * 3] * np, b = tri[i * 3 + 1] * np, c = tri[i * 3 + 2] * np;
+    const ax = vp[a], ay = vp[a + 1], az = vp[a + 2];
+    const bx = vp[b], by = vp[b + 1], bz = vp[b + 2];
+    const cx = vp[c], cy = vp[c + 1], cz = vp[c + 2];
+    const ux = bx - ax, uy = by - ay, uz = bz - az;
+    const wx = cx - ax, wy = cy - ay, wz = cz - az;
+    let nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx;
+    const len = Math.hypot(nx, ny, nz);
+    if (!(len > 1e-12)) continue;      // drop slivers rather than emit a null normal
+    nx /= len; ny /= len; nz /= len;
+    dv.setFloat32(o,      nx, true); dv.setFloat32(o +  4, ny, true); dv.setFloat32(o +  8, nz, true);
+    dv.setFloat32(o + 12, ax, true); dv.setFloat32(o + 16, ay, true); dv.setFloat32(o + 20, az, true);
+    dv.setFloat32(o + 24, bx, true); dv.setFloat32(o + 28, by, true); dv.setFloat32(o + 32, bz, true);
+    dv.setFloat32(o + 36, cx, true); dv.setFloat32(o + 40, cy, true); dv.setFloat32(o + 44, cz, true);
+    dv.setUint16(o + 48, 0, true);
+    o += 50; written++;
+  }
+  dv.setUint32(80, written, true);
+  return new Blob([buf.slice(0, 84 + written * 50)], { type: 'model/stl' });
+}
+
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+/* =====================================================================
+   VIEWPORT
+   ===================================================================== */
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+view.append(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14161b);
+
+const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 4000);
+camera.position.set(95, 70, 130);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.09;
+controls.target.set(0, 0, 0);
+
+scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x2a2d35, 1.35));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);  key.position.set(0.55, 1, 0.75);
+const fill = new THREE.DirectionalLight(0xbfd4ff, 0.55); fill.position.set(-0.8, 0.35, -0.6);
+const rim = new THREE.DirectionalLight(0xffffff, 0.35);  rim.position.set(0.1, -0.8, -0.5);
+scene.add(key, fill, rim);
+
+const material = new THREE.MeshStandardMaterial({
+  color: 0xe9e6de, roughness: 0.58, metalness: 0.0,
+  side: THREE.FrontSide, flatShading: false,
+});
+const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x2a2f3a, transparent: true, opacity: 0.55 });
+
+const root = new THREE.Group();
+root.rotation.x = -Math.PI / 2;          // manifold +Z (tube axis) becomes screen up
+scene.add(root);
+
+const clipMesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
+const clipEdges = new THREE.LineSegments(new THREE.BufferGeometry(), edgeMaterial);
+root.add(clipMesh, clipEdges);
+
+let grid = null;
+function setGrid(size, y) {
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+  const s = Math.max(20, Math.round(size / 10) * 10);
+  grid = new THREE.GridHelper(s, s / 10, 0x39404f, 0x252a34);
+  grid.material.transparent = true; grid.material.opacity = 0.8;
+  grid.position.y = y;
   scene.add(grid);
+}
 
-  var tubeGroup = new THREE.Group();
-  scene.add(tubeGroup);
+const bedOutline = new THREE.LineSegments(
+  new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({ color: 0x6aa9ff, transparent: true, opacity: 0.85 })
+);
+bedOutline.visible = false;
+scene.add(bedOutline);
 
-  var tubeMesh = null;
-  var edgesLine = null;
+function setBedOutline(size) {
+  const h = size / 2, y = 0.05;
+  const p = [[-h, y, -h], [h, y, -h], [h, y, h], [-h, y, h]];
+  const arr = [];
+  for (let i = 0; i < 4; i++) { const a = p[i], b = p[(i + 1) % 4]; arr.push(...a, ...b); }
+  bedOutline.geometry.dispose();
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+  bedOutline.geometry = g;
+}
 
-  var tubeMaterial = new THREE.MeshStandardMaterial({
-    color: 0xede6d6,
-    metalness: 0.05,
-    roughness: 0.55,
-    side: THREE.DoubleSide
-  });
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
 
-  function buildTube() {
-    var topR = state.topCirc / (2 * Math.PI);
-    var bottomR = state.bottomCirc / (2 * Math.PI);
-    var t = state.thickness;
-    var len = state.length;
-    var half = len / 2;
-
-    var topOuterR = topR + t;
-    var bottomOuterR = bottomR + t;
-
-    // Profile traced as a closed loop (outer wall up, top rim across,
-    // inner wall down, bottom rim across) so the revolved solid is a
-    // fully watertight tube, open only through the bore.
-    var pts = [
-      new THREE.Vector2(bottomOuterR, -half),
-      new THREE.Vector2(topOuterR, half),
-      new THREE.Vector2(topR, half),
-      new THREE.Vector2(bottomR, -half),
-      new THREE.Vector2(bottomOuterR, -half)
-    ];
-
-    var geo = new THREE.LatheGeometry(pts, 96);
-    geo.computeVertexNormals();
-
-    if (tubeMesh) {
-      tubeGroup.remove(tubeMesh);
-      tubeMesh.geometry.dispose();
-    }
-    if (edgesLine) {
-      tubeGroup.remove(edgesLine);
-      edgesLine.geometry.dispose();
-    }
-
-    tubeMesh = new THREE.Mesh(geo, tubeMaterial);
-    tubeGroup.add(tubeMesh);
-
-    var edgesGeo = new THREE.EdgesGeometry(geo, 20);
-    edgesLine = new THREE.LineSegments(
-      edgesGeo,
-      new THREE.LineBasicMaterial({ color: 0x0b0e11, transparent: true, opacity: 0.25 })
-    );
-    tubeGroup.add(edgesLine);
-
-    grid.position.y = -half - 15;
-
-    // ---- READOUTS ----
-    el.roTopInnerD.textContent = fmt1(topR * 2) + ' mm';
-    el.roBottomInnerD.textContent = fmt1(bottomR * 2) + ' mm';
-    el.roTopOuterD.textContent = fmt1(topOuterR * 2) + ' mm';
-    el.roBottomOuterD.textContent = fmt1(bottomOuterR * 2) + ' mm';
-    el.roTopOuterC.textContent = fmt1(topOuterR * 2 * Math.PI) + ' mm';
-    el.roBottomOuterC.textContent = fmt1(bottomOuterR * 2 * Math.PI) + ' mm';
-
-    var taperAngleRad = Math.atan((topR - bottomR) / len);
-    el.roTaper.textContent = fmt1(taperAngleRad * 180 / Math.PI) + '\u00B0';
-  }
-
-  bindPair(el.topCircRange, el.topCircNum, el.topCircVal, 'mm', 'topCirc', buildTube);
-  bindPair(el.bottomCircRange, el.bottomCircNum, el.bottomCircVal, 'mm', 'bottomCirc', buildTube);
-  bindPair(el.lengthRange, el.lengthNum, el.lengthVal, 'mm', 'length', buildTube);
-  bindPair(el.thickRange, el.thickNum, el.thickVal, 'mm', 'thickness', buildTube);
-
-  el.resetBtn.addEventListener('click', function () {
-    el.topCircRange.value = DEFAULTS.topCirc;
-    el.topCircRange.dispatchEvent(new Event('input'));
-    el.bottomCircRange.value = DEFAULTS.bottomCirc;
-    el.bottomCircRange.dispatchEvent(new Event('input'));
-    el.lengthRange.value = DEFAULTS.length;
-    el.lengthRange.dispatchEvent(new Event('input'));
-    el.thickRange.value = DEFAULTS.thickness;
-    el.thickRange.dispatchEvent(new Event('input'));
-  });
-
-  buildTube();
-
-  // ---------- CUSTOM ORBIT CONTROLS (no external dependency) ----------
-  var target = new THREE.Vector3(0, 0, 0);
-  var radius = 180;
-  var theta = Math.PI / 4;   // azimuth
-  var phi = Math.PI / 2.6;   // polar
-  var isDragging = false;
-  var lastX = 0, lastY = 0;
-
-  function updateCamera() {
-    phi = Math.max(0.15, Math.min(Math.PI - 0.15, phi));
-    radius = Math.max(40, Math.min(600, radius));
-    camera.position.x = target.x + radius * Math.sin(phi) * Math.sin(theta);
-    camera.position.z = target.z + radius * Math.sin(phi) * Math.cos(theta);
-    camera.position.y = target.y + radius * Math.cos(phi);
-    camera.lookAt(target);
-  }
-
-  var dom = renderer.domElement;
-  dom.style.cursor = 'grab';
-  dom.style.touchAction = 'none';
-
-  dom.addEventListener('pointerdown', function (e) {
-    isDragging = true;
-    lastX = e.clientX; lastY = e.clientY;
-    dom.style.cursor = 'grabbing';
-    dom.setPointerCapture(e.pointerId);
-  });
-  dom.addEventListener('pointermove', function (e) {
-    if (!isDragging) return;
-    var dx = e.clientX - lastX;
-    var dy = e.clientY - lastY;
-    lastX = e.clientX; lastY = e.clientY;
-    theta -= dx * 0.006;
-    phi -= dy * 0.006;
-    updateCamera();
-  });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (evt) {
-    dom.addEventListener(evt, function () {
-      isDragging = false;
-      dom.style.cursor = 'grab';
-    });
-  });
-  dom.addEventListener('wheel', function (e) {
-    e.preventDefault();
-    radius *= (1 + e.deltaY * 0.001);
-    updateCamera();
-  }, { passive: false });
-
-  // ---------- RESIZE ----------
-  function resize() {
-    var w = el.viewport.clientWidth;
-    var h = el.viewport.clientHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-  }
-  window.addEventListener('resize', resize);
-  resize();
-  updateCamera();
-
-  // ---------- RENDER LOOP ----------
-  function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-  }
-  animate();
+(function loop() {
+  requestAnimationFrame(loop);
+  controls.update();
+  renderer.render(scene, camera);
 })();
+
+function frame(radius, centerY) {
+  const d = radius / Math.tan((camera.fov * Math.PI / 180) / 2);
+  controls.target.set(0, centerY, 0);
+  camera.position.set(d * 0.52, centerY + d * 0.40, d * 0.75);
+  camera.near = Math.max(0.1, d / 400); camera.far = d * 40;
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+
+/* ---------- manifold mesh -> three geometry ----------
+   Positions and topology only.  Shading normals come from three's own
+   toCreasedNormals(), which smooths across the tessellated curves and
+   keeps the machined edges crisp. */
+function toGeometry(mesh) {
+  const np = mesh.numProp;
+  const n = mesh.vertProperties.length / np;
+  const pos = new Float32Array(n * 3);
+  const vp = mesh.vertProperties;
+  for (let i = 0; i < n; i++) {
+    pos[i * 3] = vp[i * np]; pos[i * 3 + 1] = vp[i * np + 1]; pos[i * 3 + 2] = vp[i * np + 2];
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(mesh.triVerts), 1));
+  g.computeBoundingSphere();
+  return g;
+}
+
+const CREASE = THREE.MathUtils.degToRad(32);
+function shade(g) {
+  try { return toCreasedNormals(g, CREASE); }
+  catch (e) { const c = g.clone(); c.computeVertexNormals(); return c; }
+}
+
+/* =====================================================================
+   BUILD PIPELINE
+   ===================================================================== */
+let phase = 1;
+let firstFrame = true;
+let pendingTimer = null;
+let lastStats = '';
+
+function busy(on) { $('busy').classList.toggle('on', on); }
+
+function requestBuild() {
+  if (pendingTimer) clearTimeout(pendingTimer);
+  busy(true);
+  pendingTimer = setTimeout(() => { pendingTimer = null; doBuild(); }, 80);
+}
+
+function doBuild() {
+  if (!Manifold) return;
+  const D = DETAIL[S.detail] || DETAIL.std;
+  const t0 = performance.now();
+  const msgs = [];
+  if (fontFailed) msgs.push(['warn', 'The typeface could not be loaded, so no letters or names are being built. Check the connection and reload.']);
+  let geom = null, radius = 40, centerY = 0;
+
+  try {
+    if (phase === 1) {
+      const r = buildClip(D);
+      const shown = orientForPrint(r.solid, r.m, D);
+      const bb = shown.boundingBox();
+      geom = toGeometry(shown.getMesh());
+      if (r.hidden.length) {
+        msgs.push(['warn', 'Hidden (within 10 mm of the bottom edge): ' + r.hidden.join(', ') +
+          '. Move them up or lengthen the clip to show them.']);
+      }
+      radius = Math.max(bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]) * 0.62;
+      centerY = (bb.min[2] + bb.max[2]) / 2;
+      updateReadouts(r.m);
+      setGrid(200, -0.8);
+      bedOutline.visible = false;
+    } else {
+      const names = parseNames(B.names);
+      const base = buildClip(D);
+      const m = base.m;
+      const foot = printFootprint(base, D);
+      const lay = bedLayout(foot, names.length);
+      const parts = [];
+      for (let i = 0; i < lay.placed; i++) {
+        const nm = names[i];
+        let one = base.solid;
+        if (B.bStart < 0 || B.bStart > m.L) {
+          if (i === 0) msgs.push(['bad', 'Start position is outside the clip (0 - ' + m.L.toFixed(1) +
+            ' mm); no names were engraved.']);
+        } else {
+          const run = buildName(m, nm, D);
+          /* Engraving removes material, so unlike the old raised name this
+             needs a real subtraction even for the live preview -- a cheap
+             compose() would just leave the pocket shape floating in place
+             rather than actually cutting it out. */
+          if (run.solid) one = T(base.solid.subtract(run.solid));
+          if (run.endV < -m.L / 2) {
+            msgs.push(['warn', '"' + nm + '" runs past the bottom of the clip. ' +
+              'Shrink the letter size, shorten the name, or move the start position up.']);
+          }
+          const overlaps = band => band && !(run.endV > m.L / 2 - band[0] || run.startV < m.L / 2 - band[1]);
+          const twBand = S.twOn ? [S.twDist - S.twDia / 2, S.twDist + S.twDia / 2] : null;
+          if (overlaps(twBand))        msgs.push(['warn', '"' + nm + '" overlaps the thumb window. Move it.']);
+          else if (overlaps(base.restBand)) msgs.push(['warn', '"' + nm + '" overlaps the thumb rest. Move it.']);
+        }
+        const placedSolid = orientForPrint(one, m, D);
+        const [px, py] = lay.at(i);
+        parts.push(T(placedSolid.translate(px, py, 0)));
+      }
+      if (names.length > lay.placed) {
+        msgs.push(['warn', (names.length - lay.placed) + ' name(s) did not fit on the bed. ' +
+          'Reduce the clearance, grow the bed, or run a second plate.']);
+      }
+      if (parts.length) {
+        const all = T(Manifold.compose(parts));
+        geom = toGeometry(all.getMesh());
+      } else {
+        geom = new THREE.BufferGeometry();
+        msgs.push(['info', 'Type a list of names to lay out a bed of personalized clips.']);
+      }
+      updateReadouts(m);
+      updateBedReadouts(m, lay, names.length);
+      setGrid(B.bBed, 0);
+      setBedOutline(B.bBed);
+      bedOutline.visible = true;
+      radius = B.bBed * 0.60;
+      centerY = foot.footZ / 2;
+    }
+  } catch (err) {
+    console.error(err);
+    msgs.push(['bad', 'Could not build this configuration: ' + (err && err.message ? err.message : err) +
+      '. Nudge the values that changed last.']);
+    geom = null;
+  } finally {
+    flushScratch();
+  }
+
+  if (geom) {
+    const tris = geom.index ? geom.index.count / 3 : 0;
+    showGeometry(geom, tris);
+    lastStats = tris.toLocaleString() + ' triangles &middot; ' + Math.round(performance.now() - t0) + ' ms';
+    if (firstFrame) { frame(radius, centerY); firstFrame = false; }
+  }
+  setMessages(phase === 1 ? 'p1msgs' : 'p2msgs', msgs);
+  $('hud').innerHTML = (phase === 1 ? '<b>Single clip</b>' : '<b>Print bed</b>') + ' &middot; ' + lastStats +
+    '<br>drag to orbit &middot; scroll to zoom &middot; right-drag to pan';
+  busy(false);
+}
+
+/* Show the new solid straight away with cheap averaged normals, then
+   upgrade to creased normals and the edge overlay once the controls go
+   quiet.  Those two passes cost about as much as the whole boolean
+   pipeline, so keeping them off the interactive path roughly doubles the
+   rate at which a dragged slider updates. */
+let polishTimer = null;
+function showGeometry(geom, tris) {
+  if (polishTimer) { clearTimeout(polishTimer); polishTimer = null; }
+  const quick = geom.clone();
+  quick.computeVertexNormals();
+  clipMesh.geometry.dispose(); clipMesh.geometry = quick;
+  clipEdges.geometry.dispose(); clipEdges.geometry = new THREE.BufferGeometry();
+  if (!tris || tris > 160000) { geom.dispose(); return; }
+  polishTimer = setTimeout(() => {
+    polishTimer = null;
+    try {
+      const nice = shade(geom);
+      const outline = new THREE.EdgesGeometry(geom, 26);
+      clipMesh.geometry.dispose();  clipMesh.geometry = nice;
+      clipEdges.geometry.dispose(); clipEdges.geometry = outline;
+    } catch (e) { /* keep the quick version */ }
+    geom.dispose();
+  }, 220);
+}
+
+function setMessages(id, list) {
+  const box = $(id); if (!box) return;
+  box.innerHTML = '';
+  const seen = new Set();
+  for (const [kind, text] of list) {
+    if (seen.has(text)) continue; seen.add(text);
+    const d = el('div', 'msg ' + kind, text);
+    box.append(d);
+  }
+}
+
+function row(tbl, label, value) {
+  const tr = document.createElement('tr');
+  tr.append(el('td', null, label), el('td', null, value));
+  tbl.append(tr);
+}
+
+function updateReadouts(m) {
+  const t = $('readouts'); if (!t) return;
+  t.innerHTML = '';
+  const f = v => v.toFixed(2) + ' mm';
+  row(t, 'Top inner diameter', f(m.topR * 2));
+  row(t, 'Inner diameter at G', f(m.gR * 2));
+  row(t, 'Bottom inner diameter', f(m.botR * 2));
+  row(t, 'Top outer diameter', f(m.topOR * 2));
+  row(t, 'Bottom outer diameter', f(m.botOR * 2));
+  row(t, 'Top outer circumference', f(m.topOR * TAU));
+  row(t, 'Bottom outer circumference', f(m.botOR * TAU));
+  row(t, 'Taper half-angle', (Math.atan(-m.slope) * 180 / Math.PI).toFixed(3) + '°');
+}
+
+function updateBedReadouts(m, lay, nNames) {
+  const t = $('bedReadouts'); if (!t) return;
+  t.innerHTML = '';
+  row(t, 'Names entered', String(nNames));
+  row(t, 'Clip footprint', lay.footX.toFixed(2) + ' × ' + lay.footY.toFixed(2) + ' mm' +
+    (S.tiltOn ? ' (tilted)' : ' (standing)'));
+  if (B.byObjOn) {
+    row(t, 'Layout', '2-lane zigzag (left/right edges)');
+    row(t, 'Y step per clip', (lay.footX + B.bClear).toFixed(1) + ' mm (clip width + clearance)');
+  } else {
+    row(t, 'Grid', lay.cols + ' × ' + lay.rows + ' (' + lay.cap + ' slots)');
+  }
+  row(t, 'Placed', lay.placed + ' of ' + nNames);
+  if (B.byObjOn) {
+    row(t, 'Print order', 'strictly increasing Y, alternating left/right edges');
+  }
+}
+
+/* =====================================================================
+   EXPORT
+   ===================================================================== */
+function exportSingle() {
+  if (!Manifold) return;
+  busy(true);
+  setTimeout(() => {
+    const D = DETAIL[S.detail] || DETAIL.std;
+    try {
+      const r = buildClip(D);
+      const m = r.m;
+      const oriented = orientForPrint(r.solid, m, D);
+      const blob = meshToSTL(oriented.getMesh(), 'recorder clip - manifold-3d');
+      const n1 = (m.topR * TAU).toFixed(1), n2 = (m.botR * TAU).toFixed(1);
+      download(blob, 'recorder-clip_' + n1 + 'x' + n2 + 'at' + S.gDist.toFixed(1) +
+        '_L' + m.L.toFixed(1) + '_W' + m.t.toFixed(1) + '.stl');
+    } catch (err) {
+      console.error(err);
+      alert('Export failed: ' + (err && err.message ? err.message : err));
+    } finally { flushScratch(); busy(false); }
+  }, 30);
+}
+
+function exportBatch() {
+  if (!Manifold) return;
+  const names = parseNames(B.names);
+  if (!names.length) { alert('Enter at least one name first.'); return; }
+  busy(true);
+  setTimeout(() => {
+    const D = DETAIL[S.detail] || DETAIL.std;
+    try {
+      const base = buildClip(D);
+      const m = base.m;
+      const lay = bedLayout(printFootprint(base, D), names.length);
+      const parts = [];
+      for (let i = 0; i < lay.placed; i++) {
+        let one = base.solid;
+        if (B.bStart >= 0 && B.bStart <= m.L) {
+          const run = buildName(m, names[i], D);
+          if (run.solid) one = T(base.solid.subtract(run.solid));
+        }
+        const placedSolid = orientForPrint(one, m, D);
+        const [px, py] = lay.at(i);
+        parts.push(T(placedSolid.translate(px, py, 0)));
+      }
+      const all = T(Manifold.compose(parts));
+      download(meshToSTL(all.getMesh(), 'recorder clip batch - manifold-3d'),
+        'recorder-clips-batch_' + lay.placed + '.stl');
+    } catch (err) {
+      console.error(err);
+      alert('Export failed: ' + (err && err.message ? err.message : err));
+    } finally { flushScratch(); busy(false); }
+  }, 30);
+}
+
+/* =====================================================================
+   3MF (spec-compliant OPC package) -- each clip kept as its own <object>
+   and <item> so slicers with per-object printing/failure-recovery (the
+   thing "per object mode" actually needs) see distinct objects instead of
+   one fused mesh, unlike the batch STL above. Packaging uses fflate
+   (zipSync) rather than hand-rolled ZIP/CRC code; the model XML itself is
+   small enough to build directly.
+   ===================================================================== */
+const MF3_CONTENT_TYPES =
+  '<?xml version="1.0" encoding="UTF-8"?>' +
+  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+  '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+  '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>' +
+  '</Types>';
+
+const MF3_ROOT_RELS =
+  '<?xml version="1.0" encoding="UTF-8"?>' +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Id="rel0" Target="/3D/3dmodel.model" ' +
+  'Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>' +
+  '</Relationships>';
+
+function escapeXML(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+function meshTo3MFObject(mesh, id, name) {
+  const tri = mesh.triVerts, vp = mesh.vertProperties, np = mesh.numProp;
+  const nv = vp.length / np;
+  const v = new Array(nv);
+  for (let i = 0; i < nv; i++) {
+    const o = i * np;
+    v[i] = '<vertex x="' + vp[o].toFixed(5) + '" y="' + vp[o + 1].toFixed(5) + '" z="' + vp[o + 2].toFixed(5) + '"/>';
+  }
+  const nf = tri.length / 3;
+  const t = new Array(nf);
+  for (let i = 0; i < nf; i++) {
+    t[i] = '<triangle v1="' + tri[i * 3] + '" v2="' + tri[i * 3 + 1] + '" v3="' + tri[i * 3 + 2] + '"/>';
+  }
+  return '<object id="' + id + '" type="model" name="' + escapeXML(name) + '">' +
+    '<mesh><vertices>' + v.join('') + '</vertices><triangles>' + t.join('') + '</triangles></mesh></object>';
+}
+
+function build3MFModel(objectsXML, itemIds) {
+  return '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<model unit="millimeter" xml:lang="en-US" ' +
+    'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">' +
+    '<resources>' + objectsXML.join('') + '</resources>' +
+    '<build>' + itemIds.map(id => '<item objectid="' + id + '"/>').join('') + '</build>' +
+    '</model>';
+}
+
+function exportBatch3MF() {
+  if (!Manifold) return;
+  const names = parseNames(B.names);
+  if (!names.length) { alert('Enter at least one name first.'); return; }
+  busy(true);
+  setTimeout(() => {
+    const D = DETAIL[S.detail] || DETAIL.std;
+    try {
+      const base = buildClip(D);
+      const m = base.m;
+      const lay = bedLayout(printFootprint(base, D), names.length);
+      const objectsXML = [];
+      const itemIds = [];
+      for (let i = 0; i < lay.placed; i++) {
+        let one = base.solid;
+        if (B.bStart >= 0 && B.bStart <= m.L) {
+          const run = buildName(m, names[i], D);
+          if (run.solid) one = T(base.solid.subtract(run.solid));
+        }
+        const placedSolid = orientForPrint(one, m, D);
+        const [px, py] = lay.at(i);
+        const part = T(placedSolid.translate(px, py, 0));
+        const id = i + 1;
+        objectsXML.push(meshTo3MFObject(part.getMesh(), id, names[i] || ('clip ' + id)));
+        itemIds.push(id);
+      }
+      const modelXML = build3MFModel(objectsXML, itemIds);
+      const zipped = zipSync({
+        '[Content_Types].xml': strToU8(MF3_CONTENT_TYPES),
+        '_rels': { '.rels': strToU8(MF3_ROOT_RELS) },
+        '3D': { '3dmodel.model': strToU8(modelXML) },
+      });
+      download(new Blob([zipped], { type: 'model/3mf' }), 'recorder-clips-batch_' + lay.placed + '.3mf');
+    } catch (err) {
+      console.error(err);
+      alert('Export failed: ' + (err && err.message ? err.message : err));
+    } finally { flushScratch(); busy(false); }
+  }, 30);
+}
+
+/* =====================================================================
+   PHASE SWITCHING
+   ===================================================================== */
+$('toBatch').addEventListener('click', () => setPhase(2));
+$('toSingle').addEventListener('click', () => setPhase(1));
+
+function setPhase(p) {
+  phase = p;
+  $('p1').classList.toggle('hidden', p !== 1);
+  $('p2').classList.toggle('hidden', p !== 2);
+  $('toBatch').classList.toggle('hidden', p !== 1);
+  $('toSingle').classList.toggle('hidden', p !== 2);
+  $('phaseLabel').textContent = p === 1
+    ? 'Phase 1 · single clip designer'
+    : 'Phase 2 · batch personalization';
+  firstFrame = true;
+  requestBuild();
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+async function boot() {
+  const msg = $('bootMsg');
+  try {
+    msg.textContent = 'loading the geometry kernel…';
+    const wasm = await ManifoldModule();
+    wasm.setup();
+    Manifold = wasm.Manifold;
+    CrossSection = wasm.CrossSection;
+
+    /* The letterforms are a nice-to-have: if the typeface will not load,
+       still give the user a working tube rather than a dead page. */
+    msg.textContent = 'loading letterforms…';
+    try {
+      FONT = await new Promise((res, rej) => new FontLoader().load(FONT_URL, res, undefined, rej));
+      const probe = FONT.generateShapes('H', 100);
+      let hi = -Infinity, lo = Infinity;
+      for (const sh of probe) for (const v of sh.getPoints(4)) { if (v.y > hi) hi = v.y; if (v.y < lo) lo = v.y; }
+      if (isFinite(hi) && isFinite(lo) && hi > lo) CAP_RATIO = (hi - lo) / 100;
+    } catch (e) {
+      console.error('typeface unavailable', e);
+      FONT = null;
+      fontFailed = true;
+    }
+
+    loadSettings();
+    loadP2Settings();
+    buildPanel1();
+    buildPanel2();
+    syncInputs();
+    resize();
+    $('boot').classList.add('hidden');
+    requestBuild();
+  } catch (err) {
+    console.error(err);
+    msg.innerHTML =
+      '<div style="max-width:440px;text-align:left;line-height:1.6">' +
+      '<b style="color:#e7eaf0">Could not start.</b><br><br>' +
+      'This build pulls three.js and manifold-3d from a CDN, so it needs an internet ' +
+      'connection the first time you open it.<br><br>' +
+      'If you are online and it still will not load, the browser may be refusing to fetch ' +
+      'modules for a page opened straight off disk. Serve the folder instead &mdash; from a ' +
+      'terminal in this folder run <code style="color:#bcd8ff">npx serve</code> (or any static ' +
+      'file server) and open the address it prints.<br><br>' +
+      '<code style="color:#ff9a9a">' + String(err && err.message ? err.message : err) + '</code></div>';
+  }
+}
+boot();
 </script>
 </body>
 </html>
